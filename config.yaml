@@ -1,0 +1,22 @@
+# 存储位置，不填默认当前目录下download
+save_dir: ./download
+# 执行过的历史任务存放位置
+history_dir: ./history
+# 执行日志
+log_dir: ./log
+log_status: true
+
+# 任务清单
+task_name: url.txt
+# 下载并发数
+concurrency: 5
+# 结束后清空任务列表
+task_clear: false
+
+# 请求头相关
+headers:
+  user_agent: User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36
+
+# 代理地址
+proxy: http://127.0.0.1:10809
+proxy_status: false
