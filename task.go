@@ -10,22 +10,18 @@ import (
 	"log"
 	"os"
 	"strings"
-)
-
-const (
-	mp4Type  = "video"
-	tsType   = "ts"
-	m3u8Type = "m3u8"
-	unknown  = "unknown"
+	"time"
 )
 
 type Task struct {
 	base.Logger
 
-	fileName    string // 文件名（无尾缀）
-	saveDir     string // 存放位置
-	fileUrl     string // http地址
-	videoScript string // 视频类型（用于文件尾缀）
+	beginTime   time.Time      // 起始时间
+	fileName    string         // 文件名（无尾缀）
+	saveDir     string         // 存放位置
+	fileUrl     string         // http地址
+	videoScript string         // 视频格式（用于文件尾缀）
+	videoType   base.VideoTpye // 视频类型
 	Do          func()
 
 	errorCount int // 连续错误数
@@ -34,18 +30,15 @@ type Task struct {
 func (t *Task) loadFunc() {
 	index := strings.LastIndex(t.fileUrl, ".")
 	vs := t.fileUrl[index+1:]
+	t.videoScript = vs
+
 	switch vs {
-	case mp4Type, tsType:
-		t.videoScript = vs
-		t.Do = t.video
-	case m3u8Type:
-		t.videoScript = m3u8Type
+	case base.M3u8Type:
+		t.videoType = base.M3u8Type
 		t.Do = t.m3u8
 	default:
-		t.videoScript = unknown
-		t.Do = func() {
-			t.Fail(t.fileName, fmt.Sprintf("地址：%v, 解析该类型视频失败", t.fileUrl))
-		}
+		t.videoType = base.SingleType
+		t.Do = t.video
 	}
 
 }
@@ -63,14 +56,8 @@ func (t *Task) m3u8() {
 	}
 
 	segments := p.Segments
-	// 下载所有分片,同一时间下载最大下载数为总分片的五分之一，最小为五
 	tCore := NewCore(config.GetConfig())
 	tCore.vacancy = make(chan struct{}, 10)
-	//if len(segments) > 5 {
-	//	tCore.vacancy = make(chan struct{}, len(segments)/5*5)
-	//} else {
-	//	tCore.vacancy = make(chan struct{}, 5)
-	//}
 	tCore.SetGroup(len(segments))
 	var playbackDuration float32
 	for index, segment := range segments {
@@ -92,7 +79,7 @@ func (t *Task) m3u8() {
 
 	_ = os.RemoveAll(d.SaveDir) // 删除文件夹
 
-	t.Done(t.fileName, "任务完成")
+	t.Done(t.fileName, fmt.Sprintf("任务完成,耗时 %s", time.Now().Sub(t.beginTime)))
 }
 
 func (t *Task) video() {
@@ -101,6 +88,7 @@ func (t *Task) video() {
 	d.SetHeader(config.Header)
 	d.SetClient(config.Client)
 	d.SetScript(t.videoScript)
+	d.SetVideoType(t.videoType)
 	if err := d.Execute(); err != nil {
 		t.errorCount++
 		if strings.HasSuffix(err.Error(), io.EOF.Error()) {
@@ -111,10 +99,22 @@ func (t *Task) video() {
 	} else {
 		t.errorCount = 0
 	}
+
+	switch t.videoType {
+	case base.M3u8Type:
+		break
+	case base.SingleType:
+		t.Done(t.fileName, fmt.Sprintf("任务完成,耗时 %s", time.Now().Sub(t.beginTime)))
+	}
 }
 
 func NewTask(name, saveDir, u string) *Task {
-	t := &Task{fileName: name, saveDir: saveDir, fileUrl: u}
+	t := &Task{
+		beginTime: time.Now(),
+		fileName:  name,
+		saveDir:   saveDir,
+		fileUrl:   u,
+	}
 	t.loadFunc()
 	return t
 }

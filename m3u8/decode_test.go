@@ -1,8 +1,10 @@
 package m3u8
 
 import (
+	"fmt"
 	"os"
 	"testing"
+	"time"
 )
 
 func TestParse(t *testing.T) {
@@ -35,4 +37,6 @@ func TestParse(t *testing.T) {
 
 func TestCalculationTime(t *testing.T) {
 	t.Log(CalculationTime(36640.25))
+	b := time.Now()
+	t.Log(fmt.Sprintf("%s", time.Now().Add(time.Second*100).Sub(b)))
 }

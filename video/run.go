@@ -13,10 +13,10 @@ import (
 	"time"
 )
 
-const (
-	mp4 = "mp4"
-	ts  = "ts"
-)
+//const (
+//	mp4 = "mp4"
+//	ts  = "ts"
+//)
 
 type DownVideo struct {
 	base.Downloader
@@ -41,19 +41,13 @@ func NewDownloader(taskName, saveDir, httpUrl string) DownVideo {
 func (d DownVideo) Execute() error {
 	// 打开文件
 	filePath := filepath.Join(d.SaveDir, fmt.Sprintf("%s.%s", d.TaskName, d.GetScript()))
-	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_RDWR, os.ModePerm)
+	f, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, os.ModePerm)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 	info, err := f.Stat()
 	d.existSize = info.Size()
-	if d.existSize != 0 && d.GetScript() != mp4 {
-		//f, err = os.OpenFile(filePath, os.O_CREATE, os.ModePerm)
-		//defer f.Close()
-		d.Doing(d.TaskName, "该文件已下载")
-		return nil
-	}
 
 	// 构建请求
 	res, err := http.NewRequest(http.MethodGet, d.Link, nil)
@@ -61,7 +55,7 @@ func (d DownVideo) Execute() error {
 		return err
 	}
 	res.Header = d.GetHeader()
-	if d.existSize != 0 {
+	if d.GetVideoType() == base.SingleType && d.existSize != 0 {
 		// 断点续传，跳过已经下载的内容
 		res.Header.Set("Range", fmt.Sprintf("bytes=%d-", d.existSize))
 	}
@@ -78,24 +72,38 @@ func (d DownVideo) Execute() error {
 		d.Done(d.TaskName, "跳过数据内容大于等于文件大小，因此不下载")
 		return nil
 	}
-	ctxRange := resp.Header.Get("Content-Range")
-	if len(ctxRange) == 0 {
-		// 首次请求，记录文件总大小
-		d.fileFutureSize = resp.ContentLength
-	} else {
-		// Content-Range: bytes 1629222-5510871/5510872 取 5510872
-		completeFileSizeString := ctxRange[strings.LastIndex(ctxRange, "/")+1:]
-		completeFileSize, err := strconv.Atoi(completeFileSizeString)
+	switch d.GetVideoType() {
+	case base.M3u8Type:
+		if resp.ContentLength == d.existSize {
+			d.Done(d.TaskName, "该分片已经下载过")
+		}
+		// 从头开始写
+		_, err := f.Seek(0, 0)
 		if err != nil {
 			return err
 		}
-		d.fileFutureSize = int64(completeFileSize)
+		break
+	case base.SingleType:
+		ctxRange := resp.Header.Get("Content-Range")
+		if len(ctxRange) == 0 {
+			// 首次请求，记录文件总大小
+			d.fileFutureSize = resp.ContentLength
+		} else {
+			// Content-Range: bytes 1629222-5510871/5510872 取 5510872
+			// 5510872 指的是文件总大小
+			completeFileSizeString := ctxRange[strings.LastIndex(ctxRange, "/")+1:]
+			completeFileSize, err := strconv.Atoi(completeFileSizeString)
+			if err != nil {
+				return err
+			}
+			d.fileFutureSize = int64(completeFileSize)
+		}
 	}
 
 	d.responseContentLength = resp.ContentLength // 剩余大小
 	bs := make([]byte, 1048576)                  // 每次读取http内容的大小(1mb)
 	defer close(d.stop)
-	if d.GetScript() == mp4 {
+	if d.GetVideoType() == base.SingleType {
 		go d.printDownloadMessage()
 	}
 	for {

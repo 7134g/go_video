@@ -106,40 +106,6 @@ func (d *Dm3u8) ExtractContain() (*M3u8, error) {
 	}
 
 	return decode, nil
-
-	//bodyBytes, err := io.ReadAll(resp.Body)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//body := string(bodyBytes)
-	//body = strings.TrimPrefix(body, "\n")
-	//body = strings.TrimSuffix(body, "\n")
-	//lines := strings.Split(body, "\n")
-	//baseurl := strings.TrimSuffix(d.Link, d.Link[strings.LastIndex(d.Link, "/")+1:])
-	//
-	//// #EXTINF  开始
-	//// #EXT-X-ENDLIST 结束
-	//if !strings.Contains(body, "#EXTINF:") {
-	//	// 第一个m3u8拿到的是m3u8列表, 选择最后一个m3u8的链接地址
-	//	m3u8Url := lines[len(lines)-1]
-	//	d.Link = baseurl + m3u8Url
-	//	segment, err := d.ExtractContain()
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	return segment, err
-	//}
-	//
-	//// 拼接所有分片下载地址
-	//segment := make([]string, 0)
-	//for _, line := range lines {
-	//	if !strings.HasPrefix(line, "#") && strings.TrimSpace(line) != "" {
-	//		segment = append(segment, baseurl+line)
-	//	}
-	//}
-	//
-	//return segment, err
 }
 
 func (d Dm3u8) MergeFiles() error {
