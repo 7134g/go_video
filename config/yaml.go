@@ -51,8 +51,7 @@ func LoadConfig() {
 
 // 初始化
 func configInit() {
-	HeaderM3U8 = createHeaderM3U8()
-	HeaderMP4 = createHeaderMP4()
+	Header = createHeader()
 
 	if _, err := os.Stat(cfg.HistoryDir); err != nil {
 		_ = os.MkdirAll(cfg.HistoryDir, os.ModeDir)
@@ -81,11 +80,10 @@ func configInit() {
 }
 
 var (
-	HeaderM3U8 string
-	HeaderMP4  http.Header
+	Header http.Header
 )
 
-func createHeaderMP4() http.Header {
+func createHeader() http.Header {
 	headers := make(http.Header, 0)
 	for k, v := range cfg.Headers {
 		headers.Set(k, v)

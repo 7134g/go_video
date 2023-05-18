@@ -85,12 +85,9 @@ func (c *Core) Submit(t *Task) {
 			c.retryTask <- t
 		} else {
 			c.doneCount++
+			c.printM3u8(t)
 		}
 
-		if c.groupCount != 0 {
-			// m3u8组任务打印信息
-			c.Doing(t.fileName, fmt.Sprintf("分片下载进度(%d/%d)", c.doneCount, c.groupCount))
-		}
 		<-c.vacancy
 	}()
 }
@@ -148,4 +145,13 @@ func (c *Core) StoreHistory() {
 		log.Fatalln(err)
 	}
 	_ = f.Close()
+}
+
+func (c *Core) printM3u8(t *Task) {
+	if c.groupCount == 0 {
+		return
+	}
+	// m3u8组任务打印信息
+	c.Doing(t.fileName, fmt.Sprintf("分片下载进度(%d/%d) %.2f ",
+		c.doneCount, c.groupCount, float64(c.doneCount)*100/float64(c.groupCount))+"%")
 }
