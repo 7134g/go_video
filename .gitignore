@@ -1,5 +1,6 @@
-dv.exe
+./dv.exe
 ./download
 ./histroy
 ./log
 ./idea
+./example

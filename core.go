@@ -24,10 +24,10 @@ type Core struct {
 	doneCount  int // 已完成任务数
 	groupCount int // 该组任务总数量
 
-	cfg *config.Config
+	cfg *config.ProjectConfig
 }
 
-func NewCore(cfg *config.Config) Core {
+func NewCore(cfg *config.ProjectConfig) Core {
 	return Core{
 		wg:        &sync.WaitGroup{},
 		list:      make([]*Task, 0),
@@ -58,7 +58,7 @@ func (c *Core) Run() {
 		select {
 		case t := <-c.retryTask:
 			c.Submit(t)
-			if t.errorCount >= 3 {
+			if t.errorCount >= config.GetConfig().TaskErrorMaxCount {
 				log.Printf("文件名：%v 超出最大尝试次数\n", t.fileName)
 				continue
 			}
@@ -82,6 +82,7 @@ func (c *Core) Submit(t *Task) {
 		t.Do() // 执行
 		c.wg.Done()
 		if t.errorCount > 0 {
+			time.Sleep(time.Second * time.Duration(config.GetConfig().TaskErrorDuration))
 			c.retryTask <- t
 		} else {
 			c.doneCount++

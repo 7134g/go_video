@@ -1,4 +1,0 @@
-test_m3u8
-http://devimages.apple.com/iphone/samples/bipbop/bipbopall.m3u8
-test_mp4
-http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4

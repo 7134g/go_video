@@ -24,23 +24,7 @@ type Task struct {
 	videoType   base.VideoTpye // 视频类型
 	Do          func()
 
-	errorCount int // 连续错误数
-}
-
-func (t *Task) loadFunc() {
-	index := strings.LastIndex(t.fileUrl, ".")
-	vs := t.fileUrl[index+1:]
-	t.videoScript = vs
-
-	switch vs {
-	case base.M3u8Type:
-		t.videoType = base.M3u8Type
-		t.Do = t.m3u8
-	default:
-		t.videoType = base.SingleType
-		t.Do = t.video
-	}
-
+	errorCount uint // 连续错误数
 }
 
 func (t *Task) m3u8() {
@@ -53,17 +37,27 @@ func (t *Task) m3u8() {
 		t.errorCount++
 		t.Fail(t.fileName, err.Error())
 		return
+	} else {
+		t.errorCount = 0
 	}
 
 	segments := p.Segments
 	tCore := NewCore(config.GetConfig())
-	tCore.vacancy = make(chan struct{}, 10)
+	// 设置并发大小
+	size := int(config.GetConfig().ConcurrencyM3u8)
+	if len(segments) > size {
+		tCore.vacancy = make(chan struct{}, len(segments)/size*size)
+	} else {
+		tCore.vacancy = make(chan struct{}, 5)
+	}
+	//tCore.vacancy = make(chan struct{}, config.GetConfig().ConcurrencyM3u8) // 设置分片并发下载数
 	tCore.SetGroup(len(segments))
 	var playbackDuration float32
 	for index, segment := range segments {
 		fn := fmt.Sprintf("%s_part_%d", t.fileName, index)
 		link := d.M3u8BaseLink + segment.URI
 		task := NewTask(fn, d.SaveDir, link)
+		task.setVideoType(base.M3u8Type)
 		playbackDuration += segment.Duration
 		tCore.AddTask(task)
 	}
@@ -108,6 +102,10 @@ func (t *Task) video() {
 	}
 }
 
+func (t *Task) setVideoType(vs base.VideoTpye) {
+	t.videoType = vs
+}
+
 func NewTask(name, saveDir, u string) *Task {
 	t := &Task{
 		beginTime: time.Now(),
@@ -115,6 +113,18 @@ func NewTask(name, saveDir, u string) *Task {
 		saveDir:   saveDir,
 		fileUrl:   u,
 	}
-	t.loadFunc()
+
+	index := strings.LastIndex(t.fileUrl, ".")
+	vs := t.fileUrl[index+1:]
+	t.videoScript = vs
+	switch vs {
+	case base.M3u8Type:
+		t.videoType = base.M3u8Type
+		t.Do = t.m3u8
+	default:
+		t.videoType = base.SingleType
+		t.Do = t.video
+	}
+
 	return t
 }

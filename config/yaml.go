@@ -12,22 +12,25 @@ import (
 )
 
 var (
-	cfg Config
+	cfg ProjectConfig
 )
 
-func GetConfig() *Config {
+func GetConfig() *ProjectConfig {
 	return &cfg
 }
 
-type Config struct {
+type ProjectConfig struct {
 	SaveDir    string `yaml:"save_dir"`
 	HistoryDir string `yaml:"history_dir"`
 	LogDir     string `yaml:"log_dir"`
 	LogStatus  bool   `yaml:"log_status"`
 
-	TaskName    string `yaml:"task_name"`   // 任务清单
-	Concurrency int    `yaml:"concurrency"` // 并发数
-	TaskClear   bool   `yaml:"task_clear"`  // 清空任务清单文件
+	TaskName          string `yaml:"task_name"`            // 任务清单
+	TaskErrorMaxCount uint   `yaml:"task_error_max_count"` // 任务最大数
+	TaskErrorDuration uint   `yaml:"task_error_duration"`  // 错误时候休眠多久后重试
+	Concurrency       uint   `yaml:"concurrency"`          // 并发数
+	ConcurrencyM3u8   uint   `yaml:"concurrency_m3u8"`     // m3u8 片段并发大小
+	TaskClear         bool   `yaml:"task_clear"`           // 清空任务清单文件
 
 	Headers     map[string]string `yaml:"headers"` // 请求头
 	Proxy       string            `yaml:"proxy"`
