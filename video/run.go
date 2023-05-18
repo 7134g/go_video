@@ -48,7 +48,7 @@ func (d DownVideo) Execute() error {
 	defer f.Close()
 	info, err := f.Stat()
 	d.existSize = info.Size()
-	if d.existSize != 0 && d.GetScript() == ts {
+	if d.existSize != 0 && d.GetScript() != mp4 {
 		//f, err = os.OpenFile(filePath, os.O_CREATE, os.ModePerm)
 		//defer f.Close()
 		d.Doing(d.TaskName, "该文件已下载")
@@ -75,7 +75,7 @@ func (d DownVideo) Execute() error {
 
 	// 处理请求结果
 	if resp.ContentLength <= 0 {
-		d.Done(d.TaskName, "该文件已下载")
+		d.Done(d.TaskName, "跳过数据内容大于等于文件大小，因此不下载")
 		return nil
 	}
 	ctxRange := resp.Header.Get("Content-Range")
