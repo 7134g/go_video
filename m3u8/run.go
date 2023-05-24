@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -56,6 +57,9 @@ type Dm3u8 struct {
 	M3u8BaseLink    string // 分片所使用的基础链接地址
 	fileCount       int    // 已下载的分片数量
 	fileFutureCount int    // 需要下载的所有分片数
+
+	Crypto       []byte      // 加密密匙
+	CryptoMethod CryptMethod // 加密方式
 }
 
 func NewDownloader(taskName, saveDir, httpUrl string) Dm3u8 {
@@ -105,6 +109,26 @@ func (d *Dm3u8) ExtractContain() (*M3u8, error) {
 		return d.ExtractContain()
 	}
 
+	for _, key := range decode.Keys {
+		if key.Method == CryptMethodNONE {
+			continue
+		}
+		d.CryptoMethod = key.Method
+		resp, err := d.GetClient().Get(d.M3u8BaseLink + key.URI)
+		if resp != nil {
+			defer resp.Body.Close()
+		}
+		if err != nil {
+			return nil, err
+		}
+		b, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		d.Crypto = b
+		break
+	}
+
 	return decode, nil
 }
 
@@ -135,34 +159,4 @@ func (d Dm3u8) MergeFiles() error {
 	}
 
 	return nil
-}
-
-// 获取目录下的文件列表
-func getFilesInDir(dirname string) ([]string, error) {
-	var files []string
-
-	err := filepath.Walk(dirname, func(path string, info os.FileInfo, err error) error {
-		if !info.IsDir() {
-			files = append(files, info.Name())
-		}
-		return nil
-	})
-
-	return files, err
-}
-
-const (
-	hour   = 3600
-	minute = 60
-)
-
-// CalculationTime 计算播放总时长
-func CalculationTime(d float32) string {
-	t := int(d)
-
-	h := t / hour              // 计算小时数
-	m := (t - h*hour) / minute // 计算分钟数
-	s := t - h*hour - m*minute // 计算剩余的秒数
-
-	return fmt.Sprintf("%d h %d m %d s", h, m, s)
 }

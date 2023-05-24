@@ -16,13 +16,15 @@ import (
 type Task struct {
 	base.Logger
 
-	beginTime   time.Time      // 起始时间
-	fileName    string         // 文件名（无尾缀）
-	saveDir     string         // 存放位置
-	fileUrl     string         // http地址
-	videoScript string         // 视频格式（用于文件尾缀）
-	videoType   base.VideoTpye // 视频类型
-	Do          func()
+	beginTime time.Time // 起始时间
+	fileName  string    // 文件名（无尾缀）
+	saveDir   string    // 存放位置
+	fileUrl   string    // http地址
+	//videoScript string         // 视频格式（用于文件尾缀）
+	//videoType   base.VideoType // 视频类型
+
+	videoSetting video.VideoSetting
+	Do           func()
 
 	errorCount uint // 连续错误数
 }
@@ -45,15 +47,21 @@ func (t *Task) m3u8() {
 	tCore := NewCore(config.GetConfig())
 	// 设置并发大小
 	size := int(config.GetConfig().ConcurrencyM3u8)
-	if len(segments) > size {
+	if len(segments)/(size*size) > size {
 		tCore.vacancy = make(chan struct{}, len(segments)/(size*size))
 	} else {
-		tCore.vacancy = make(chan struct{}, 5)
+		tCore.vacancy = make(chan struct{}, size)
 	}
 	//tCore.vacancy = make(chan struct{}, config.GetConfig().ConcurrencyM3u8) // 设置分片并发下载数
-	tCore.SetGroup(len(segments))
-	var playbackDuration float32
+	tCore.SetGroupCount(len(segments))
+	var playbackDuration float32 // 该视频总时间
+	vSetting := video.VideoSetting{
+		CryptoKey:    d.Crypto,
+		CryptoMethod: string(d.CryptoMethod),
+	}
 	for index, segment := range segments {
+		playbackDuration += segment.Duration
+
 		fn := fmt.Sprintf("%s_part_%d", t.fileName, index)
 		var link string
 		if video.CompleteURL(segment.URI) {
@@ -61,9 +69,9 @@ func (t *Task) m3u8() {
 		} else {
 			link = segment.URI
 		}
-		task := NewTask(fn, d.SaveDir, link)
-		task.setVideoType(base.M3u8Type)
-		playbackDuration += segment.Duration
+
+		task := NewTask(fn, d.SaveDir, link, vSetting)
+		task.setFunc(base.VideoListType)
 		tCore.AddTask(task)
 	}
 	log.Printf("该电影时长 %s \n", m3u8.CalculationTime(playbackDuration))
@@ -86,8 +94,7 @@ func (t *Task) video() {
 	d := video.NewDownloader(t.fileName, t.saveDir, t.fileUrl)
 	d.SetHeader(config.Header)
 	d.SetClient(config.Client)
-	d.SetScript(t.videoScript)
-	d.SetVideoType(t.videoType)
+	d.SetVideoSetting(t.videoSetting)
 	if err := d.Execute(); err != nil {
 		t.errorCount++
 		if strings.HasSuffix(err.Error(), io.EOF.Error()) {
@@ -95,41 +102,45 @@ func (t *Task) video() {
 			return
 		}
 		t.Fail(t.fileName, err.Error())
+		return
 	} else {
 		t.errorCount = 0
 	}
 
-	switch t.videoType {
-	case base.M3u8Type:
-		break
-	case base.SingleType:
-		t.Done(t.fileName, fmt.Sprintf("任务完成,耗时 %s", time.Now().Sub(t.beginTime)))
-	}
+	//switch t.videoSetting.VideoType {
+	//case base.M3u8Type:
+	//	break
+	//case base.SingleType:
+	//	t.Done(t.fileName, fmt.Sprintf("任务完成,耗时 %s", time.Now().Sub(t.beginTime)))
+	//}
 }
 
-func (t *Task) setVideoType(vs base.VideoTpye) {
-	t.videoType = vs
-}
-
-func NewTask(name, saveDir, u string) *Task {
+func NewTask(name, saveDir, u string, vSetting video.VideoSetting) *Task {
 	t := &Task{
 		beginTime: time.Now(),
 		fileName:  name,
 		saveDir:   saveDir,
 		fileUrl:   u,
 	}
-
 	index := strings.LastIndex(t.fileUrl, ".")
-	vs := t.fileUrl[index+1:]
-	t.videoScript = vs
-	switch vs {
-	case base.M3u8Type:
-		t.videoType = base.M3u8Type
-		t.Do = t.m3u8
-	default:
-		t.videoType = base.SingleType
+	vSetting.VideoExt = t.fileUrl[index+1:]
+	t.videoSetting = vSetting
+
+	return t
+}
+
+func (t *Task) setFunc(v string) {
+	t.videoSetting.VideoCategory = v
+	switch v {
+	case base.AloneVideoType:
+		switch t.videoSetting.VideoExt {
+		case "m3u8":
+			t.Do = t.m3u8
+		default:
+			t.Do = t.video
+		}
+	case base.VideoListType:
 		t.Do = t.video
 	}
 
-	return t
 }

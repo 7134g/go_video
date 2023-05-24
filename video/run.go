@@ -1,7 +1,9 @@
 package video
 
 import (
+	"bytes"
 	"dv/base"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -25,6 +27,8 @@ type DownVideo struct {
 	responseContentLength int64 // 该请求仍需要下载长度
 	fileFutureSize        int64 // 文件总大小
 
+	setting VideoSetting
+
 	stop chan struct{} // 停止打印下载信息
 }
 
@@ -37,9 +41,21 @@ func NewDownloader(taskName, saveDir, httpUrl string) DownVideo {
 	return m
 }
 
+func (d *DownVideo) setExistSize(value int64) {
+	d.existSize = value
+}
+
+func (d *DownVideo) SetVideoSetting(vt VideoSetting) {
+	d.setting = vt
+}
+
+func (d *DownVideo) GetVideoSetting() VideoSetting {
+	return d.setting
+}
+
 func (d DownVideo) Execute() error {
 	// 打开文件
-	filePath := filepath.Join(d.SaveDir, fmt.Sprintf("%s.%s", d.TaskName, d.GetScript()))
+	filePath := filepath.Join(d.SaveDir, fmt.Sprintf("%s.%s", d.TaskName, d.setting.VideoExt))
 	f, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, os.ModePerm)
 	if err != nil {
 		return err
@@ -54,7 +70,7 @@ func (d DownVideo) Execute() error {
 		return err
 	}
 	res.Header = d.GetHeader()
-	if d.GetVideoType() == base.SingleType && d.existSize != 0 {
+	if d.setting.VideoCategory == base.AloneVideoType && d.existSize != 0 {
 		// 断点续传，跳过已经下载的内容
 		res.Header.Set("Range", fmt.Sprintf("bytes=%d-", d.existSize))
 	}
@@ -71,18 +87,31 @@ func (d DownVideo) Execute() error {
 		d.Done(d.TaskName, "跳过数据内容大于等于文件大小，因此不下载")
 		return nil
 	}
-	switch d.GetVideoType() {
-	case base.M3u8Type:
+	switch d.setting.VideoCategory {
+	case base.VideoListType:
 		if resp.ContentLength == d.existSize {
 			d.Done(d.TaskName, "该分片已经下载过")
 		}
-		// 从头开始写
-		_, err := f.Seek(0, 0)
-		if err != nil {
+		write := bytes.NewBuffer(nil)
+
+		if err := d.rw(resp.Body, write); err != nil {
 			return err
 		}
-		break
-	case base.SingleType:
+
+		// 从头开始写
+		data := d.decode(write.Bytes())
+		if data == nil {
+			return errors.New("视频格式解析失败")
+		}
+		if _, err := f.Seek(0, 0); err != nil {
+			return err
+		}
+		if _, err = f.Write(data); err != nil {
+			return err
+		}
+
+		return nil
+	case base.AloneVideoType:
 		ctxRange := resp.Header.Get("Content-Range")
 		if len(ctxRange) == 0 {
 			// 首次请求，记录文件总大小
@@ -97,38 +126,48 @@ func (d DownVideo) Execute() error {
 			}
 			d.fileFutureSize = int64(completeFileSize)
 		}
+
+		d.responseContentLength = resp.ContentLength // 剩余大小
+		defer close(d.stop)
+		go d.printDownloadMessage()
+		return d.rw(resp.Body, f)
+	default:
+		return errors.New("VideoType 类型错误")
 	}
 
-	d.responseContentLength = resp.ContentLength // 剩余大小
-	bs := make([]byte, 1048576)                  // 每次读取http内容的大小(1mb)
-	defer close(d.stop)
-	if d.GetVideoType() == base.SingleType {
-		go d.printDownloadMessage()
-	}
+}
+
+func (d *DownVideo) rw(read io.Reader, write io.Writer) error {
+	bs := make([]byte, 1048576) // 每次读取http内容的大小(1mb)
+
 	for {
-		rn, err := resp.Body.Read(bs)
+		rn, err := read.Read(bs)
 		if err != nil {
 			if err == io.EOF {
 				// 完成
 				d.readSize += rn
-				_, _ = f.Write(bs[:rn])
+				_, _ = write.Write(bs[:rn])
 				return nil
 			}
 			return err
 		}
 
 		d.readSize += rn
-		_, err = f.Write(bs[:rn])
+		_, err = write.Write(bs[:rn])
 		if err != nil {
 			return err
 		}
 
 	}
-
 }
 
-func (d *DownVideo) setExistSize(value int64) {
-	d.existSize = value
+func (d *DownVideo) decode(data []byte) []byte {
+	switch {
+	case strings.Contains(d.setting.CryptoMethod, "AES"):
+		return base.AESDecrypt(data, d.setting.CryptoKey)
+	}
+
+	return data
 }
 
 func (d *DownVideo) printDownloadMessage() {

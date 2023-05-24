@@ -3,6 +3,7 @@ package main
 import (
 	"dv/base"
 	"dv/config"
+	"dv/video"
 	"errors"
 	"fmt"
 	"log"
@@ -97,7 +98,7 @@ func (c *Core) AddTask(t *Task) {
 	c.list = append(c.list, t)
 }
 
-func (c *Core) SetGroup(n int) {
+func (c *Core) SetGroupCount(n int) {
 	c.groupCount = n
 }
 
@@ -126,7 +127,8 @@ func (c *Core) ParseTaskList() error {
 			log.Println("错误值：", value)
 			continue
 		}
-		task := NewTask(key, config.GetConfig().SaveDir, value)
+		task := NewTask(key, config.GetConfig().SaveDir, value, video.VideoSetting{})
+		task.setFunc(base.AloneVideoType)
 		c.list = append(c.list, task)
 		i++
 	}
