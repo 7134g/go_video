@@ -46,7 +46,7 @@ func (t *Task) m3u8() {
 	// 设置并发大小
 	size := int(config.GetConfig().ConcurrencyM3u8)
 	if len(segments) > size {
-		tCore.vacancy = make(chan struct{}, len(segments)/size*size)
+		tCore.vacancy = make(chan struct{}, len(segments)/(size*size))
 	} else {
 		tCore.vacancy = make(chan struct{}, 5)
 	}
@@ -55,7 +55,12 @@ func (t *Task) m3u8() {
 	var playbackDuration float32
 	for index, segment := range segments {
 		fn := fmt.Sprintf("%s_part_%d", t.fileName, index)
-		link := d.M3u8BaseLink + segment.URI
+		var link string
+		if video.CompleteURL(segment.URI) {
+			link = d.M3u8BaseLink + segment.URI
+		} else {
+			link = segment.URI
+		}
 		task := NewTask(fn, d.SaveDir, link)
 		task.setVideoType(base.M3u8Type)
 		playbackDuration += segment.Duration

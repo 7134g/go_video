@@ -1,6 +1,10 @@
+.idea/
+download/
+histroy/
+log/
+example/
+
+
 ./dv.exe
-./download
-./histroy
-./log
-./idea
-./example
+
+

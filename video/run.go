@@ -4,7 +4,6 @@ import (
 	"dv/base"
 	"fmt"
 	"io"
-	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -155,22 +154,5 @@ func (d *DownVideo) printDownloadMessage() {
 			d.Done(d.TaskName, msg)
 			return
 		}
-	}
-}
-
-func unitReturn(value float64) (float64, string) {
-	switch {
-	case value > 1024:
-		// kb
-		return value / 1024, "kb"
-	case value > math.Pow(1024, 2):
-		// mb
-		return value / math.Pow(1024, 2), "mb"
-	case value > math.Pow(1024, 3):
-		// gb
-		return value / math.Pow(1024, 3), "gb"
-	default:
-		// byte
-		return value, "byte"
 	}
 }

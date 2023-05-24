@@ -48,10 +48,10 @@ func (c *Core) Run() {
 	c.wg.Wait()
 
 	// 下面是重试
-	if len(c.retryTask) == 0 {
-		// 没有失败任务
-		return
-	}
+	//if len(c.retryTask) == 0 {
+	//	// 没有失败任务
+	//	return
+	//}
 	ticker := time.NewTicker(time.Second * 1)
 	defer ticker.Stop()
 	for {
@@ -63,7 +63,7 @@ func (c *Core) Run() {
 				continue
 			}
 		case <-ticker.C:
-			if len(c.vacancy) == 0 {
+			if len(c.vacancy) == 0 && len(c.retryTask) == 0 {
 				return
 			}
 		}
