@@ -14,11 +14,6 @@ import (
 	"time"
 )
 
-//const (
-//	mp4 = "mp4"
-//	ts  = "ts"
-//)
-
 type DownVideo struct {
 	base.Downloader
 
@@ -41,16 +36,8 @@ func NewDownloader(taskName, saveDir, httpUrl string) DownVideo {
 	return m
 }
 
-func (d *DownVideo) setExistSize(value int64) {
-	d.existSize = value
-}
-
 func (d *DownVideo) SetVideoSetting(vt VideoSetting) {
 	d.setting = vt
-}
-
-func (d *DownVideo) GetVideoSetting() VideoSetting {
-	return d.setting
 }
 
 func (d DownVideo) Execute() error {
@@ -162,8 +149,7 @@ func (d *DownVideo) rw(read io.Reader, write io.Writer) error {
 }
 
 func (d *DownVideo) decode(data []byte) []byte {
-	switch {
-	case strings.Contains(d.setting.CryptoMethod, "AES"):
+	if strings.Contains(d.setting.CryptoMethod, "AES") {
 		return base.AESDecrypt(data, d.setting.CryptoKey)
 	}
 
