@@ -1,72 +1,28 @@
 package m3u8
 
 import (
-	"bufio"
-	"dv/base"
+	"dv/config"
+	"dv/table"
 	"errors"
-	"fmt"
-	"golang.org/x/text/encoding/simplifiedchinese"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 )
 
-// Execute m3u8 下载
-func Execute(filename string, params []string) error {
-	// m3u8.exe %url% --workDir E:\recreation\github --enableDelAfterDone --saveName %filename%
-	cmd := exec.Command(params[0], params[1:]...)
-	out, err := cmd.StdoutPipe()
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	if err := cmd.Start(); err != nil {
-		log.Fatalln(err)
-	}
-
-	reader := bufio.NewReader(out)
-	for true {
-		line, _, readErr := reader.ReadLine()
-		if readErr != nil {
-			if readErr == io.EOF {
-				break
-			}
-			log.Fatalln(err)
-		}
-		gbkData, err := simplifiedchinese.GBK.NewDecoder().Bytes(line)
-		if err != nil {
-			log.Fatalln(err)
-		}
-
-		log.Println("doing......", filename) // 进度信息
-		fmt.Println(string(gbkData))
-	}
-	fmt.Println("done ========》", filename)
-
-	return nil
-}
-
 type Dm3u8 struct {
-	base.Downloader
+	Name string
+	Link string
 
-	M3u8BaseLink    string // 分片所使用的基础链接地址
-	fileCount       int    // 已下载的分片数量
-	fileFutureCount int    // 需要下载的所有分片数
-
-	Crypto       []byte      // 加密密匙
-	CryptoMethod CryptMethod // 加密方式
+	M3u8BaseLink string // 分片所使用的基础链接地址
 }
 
-func NewDownloader(taskName, saveDir, httpUrl string) Dm3u8 {
+func NewDownloader(name, link string) Dm3u8 {
 	m := Dm3u8{}
-	m.TaskName = taskName
-	m.SaveDir = filepath.Join(saveDir, taskName)
-	m.Link = httpUrl
+	m.Name = name
+	m.Link = link
 	return m
 }
 
@@ -80,8 +36,8 @@ func (d *Dm3u8) ExtractContain() (*M3u8, error) {
 	if err != nil {
 		return nil, err
 	}
-	res.Header = d.GetHeader()
-	resp, err := d.GetClient().Do(res)
+	res.Header = config.Header
+	resp, err := config.Client.Do(res)
 	if resp != nil {
 		defer resp.Body.Close()
 	}
@@ -90,11 +46,6 @@ func (d *Dm3u8) ExtractContain() (*M3u8, error) {
 	}
 
 	// 处理请求
-	info, err := os.Stat(d.SaveDir)
-	if err != nil || !info.IsDir() {
-		_ = os.MkdirAll(d.SaveDir, os.ModeDir)
-	}
-
 	decode, err := parse(resp.Body)
 	if err != nil {
 		return nil, err
@@ -113,8 +64,8 @@ func (d *Dm3u8) ExtractContain() (*M3u8, error) {
 		if key.Method == CryptMethodNONE {
 			continue
 		}
-		d.CryptoMethod = key.Method
-		resp, err := d.GetClient().Get(d.M3u8BaseLink + key.URI)
+		// 获取加密密匙
+		resp, err := config.Client.Get(d.M3u8BaseLink + key.URI)
 		if resp != nil {
 			defer resp.Body.Close()
 		}
@@ -125,28 +76,28 @@ func (d *Dm3u8) ExtractContain() (*M3u8, error) {
 		if err != nil {
 			return nil, err
 		}
-		d.Crypto = b
+		table.CryptoVedioTable.Set(string(key.Method), b)
 		break
 	}
 
 	return decode, nil
 }
 
-func (d Dm3u8) MergeFiles() error {
-	outputFilepath := filepath.Join(d.SaveDir, "../", d.TaskName+".mp4")
+func (d Dm3u8) MergeFiles(saveDir string) error {
+	outputFilepath := filepath.Join(saveDir, "../", d.Name+".mp4")
 	outputFile, err := os.Create(outputFilepath)
 	if err != nil {
 		return err
 	}
 	defer outputFile.Close()
 
-	files, err := getFilesInDir(d.SaveDir)
+	files, err := getFilesInDir(saveDir)
 	if err != nil {
 		return err
 	}
 
 	for _, file := range files {
-		inputFilepath := filepath.Join(d.SaveDir, file)
+		inputFilepath := filepath.Join(saveDir, file)
 		inputFile, err := os.Open(inputFilepath)
 		if err != nil {
 			return err

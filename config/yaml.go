@@ -25,7 +25,7 @@ type ProjectConfig struct {
 	LogDir     string `yaml:"log_dir"`
 	LogStatus  bool   `yaml:"log_status"`
 
-	TaskName          string `yaml:"task_name"`            // 任务清单
+	TaskList          string `yaml:"task_list"`            // 任务清单
 	TaskErrorMaxCount uint   `yaml:"task_error_max_count"` // 任务最大数
 	TaskErrorDuration uint   `yaml:"task_error_duration"`  // 错误时候休眠多久后重试
 	Concurrency       uint   `yaml:"concurrency"`          // 并发数
@@ -79,7 +79,7 @@ func configInit() {
 	}
 	log.SetFlags(log.Ltime)
 	log.Printf("读取 %s 文件, 同时进行任务最大值为 %d , 操作目录为 %s \n",
-		cfg.TaskName, cfg.Concurrency, cfg.SaveDir)
+		cfg.TaskList, cfg.Concurrency, cfg.SaveDir)
 }
 
 var (

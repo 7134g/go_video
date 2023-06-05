@@ -7,7 +7,7 @@ log_dir: ./log
 log_status: true
 
 # 任务清单
-task_name: url.txt
+task_list: url.txt
 # 任务连续最大错误次数
 task_error_max_count: 50
 # 错误时候休眠多久后重试
