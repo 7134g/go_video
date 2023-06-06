@@ -5,7 +5,7 @@ import (
 )
 
 func NewTicker(stop chan struct{}, f func()) {
-	t := time.NewTicker(time.Second)
+	t := time.NewTicker(time.Second * 3)
 	defer t.Stop()
 	for {
 		select {

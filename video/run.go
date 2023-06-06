@@ -163,7 +163,7 @@ func (d *DownVideo) decode(data []byte) []byte {
 
 func (d *DownVideo) printDownloadMessage() {
 
-	ticker := time.NewTicker(time.Second)                      // 间隔时间打印
+	ticker := time.NewTicker(time.Second * 3)                  // 间隔时间打印
 	fileSize := float64(d.fileFutureSize) / 1024 / 1024 / 1024 // gb
 	var lastNowRS float64                                      // 上一次打印消息的已读数据长度
 	now := time.Now().Unix()                                   // 记录耗时
@@ -173,7 +173,7 @@ func (d *DownVideo) printDownloadMessage() {
 		case <-ticker.C:
 			nowRS := float64(d.readSize)
 			score := (nowRS + float64(d.existSize)) / float64(d.fileFutureSize) * 100
-			dataByTime := (nowRS - lastNowRS) / float64(1) // 间隔时间内下载的数据, byte
+			dataByTime := (nowRS - lastNowRS) / float64(3) // 间隔时间内下载的数据, byte
 			speed, unit := unitReturn(dataByTime)
 			msg = fmt.Sprintf("百分比 %.2f 速度 %.3f %s/s | %.3f GB", score, speed, unit, fileSize)
 			lastNowRS = nowRS

@@ -48,7 +48,7 @@ func (c *Core) Submit(t *Task) {
 		err := t.Do()
 		<-c.vacancy
 		if err != nil {
-			log.Println(err)
+			log.Println(t.Name, err)
 			table.IncreaseErrorCount(t.Link)
 			if table.IsMaxErrorCount(t.Link) {
 				log.Printf("文件名：%v 超出最大尝试次数\n", t.Name)
