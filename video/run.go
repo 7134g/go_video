@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -71,6 +72,10 @@ func (d DownVideo) Execute(isM3u8Child bool) error {
 	if resp.ContentLength <= 0 {
 		log.Printf("%s 跳过数据内容大于等于文件大小，因此不下载\n", d.Name)
 		return nil
+	}
+
+	if resp.StatusCode != 200 {
+		return errors.New(resp.Status)
 	}
 
 	if isM3u8Child {
@@ -144,8 +149,12 @@ func (d *DownVideo) rw(read io.Reader, write io.Writer) error {
 	}
 }
 
+var re, _ = regexp.Compile(`_part_\d+`)
+
 func (d *DownVideo) decode(data []byte) []byte {
-	if key, ok := table.CryptoVedioTable.Get(d.Name); ok {
+	name := re.ReplaceAllString(d.Name, "")
+
+	if key, ok := table.CryptoVideoTable.Get(name); ok {
 		return base.AESDecrypt(data, key)
 	}
 

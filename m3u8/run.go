@@ -76,7 +76,7 @@ func (d *Dm3u8) ExtractContain() (*M3u8, error) {
 		if err != nil {
 			return nil, err
 		}
-		table.CryptoVedioTable.Set(string(key.Method), b)
+		table.CryptoVideoTable.Set(d.Name, b)
 		break
 	}
 

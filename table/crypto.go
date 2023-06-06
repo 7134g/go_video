@@ -2,7 +2,10 @@ package table
 
 import "sync"
 
-var CryptoVedioTable CryptoTable
+var CryptoVideoTable = CryptoTable{
+	lock: sync.RWMutex{},
+	body: make(map[string][]byte),
+}
 
 type CryptoTable struct {
 	lock sync.RWMutex

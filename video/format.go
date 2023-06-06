@@ -22,7 +22,7 @@ func unitReturn(value float64) (float64, string) {
 	}
 }
 
-var urlRegexp, _ = regexp.Compile(`^http{s}[0,1]://`)
+var urlRegexp, _ = regexp.Compile(`^http[s]{0,1}://`)
 
 func CompleteURL(u string) bool {
 	return urlRegexp.MatchString(u)
