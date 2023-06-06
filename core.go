@@ -1,16 +1,14 @@
 package main
 
 import (
-	"dv/base"
 	"dv/config"
 	"dv/table"
 	"log"
 	"sync"
+	"time"
 )
 
 type Core struct {
-	base.Logger
-
 	wg      *sync.WaitGroup
 	vacancy chan struct{} // 并发控制
 
@@ -26,15 +24,20 @@ func NewCore() Core {
 	}
 }
 
-func (c *Core) Run(tl []Task) {
-	for _, t := range tl {
-		c.Submit(&t)
+func (c *Core) Run(ts []Task) {
+	if ts == nil || len(ts) == 0 {
+		return
 	}
+
+	for i := 0; i < len(ts); i++ {
+		c.Submit(&ts[i])
+	}
+
 }
 
 func (c *Core) Wait() {
 	c.wg.Wait()
-	log.Println("本次运行结束")
+	//log.Println("本次运行结束")
 }
 
 func (c *Core) Submit(t *Task) {
@@ -45,12 +48,13 @@ func (c *Core) Submit(t *Task) {
 		err := t.Do()
 		<-c.vacancy
 		if err != nil {
+			log.Println(err)
 			table.IncreaseErrorCount(t.Link)
 			if table.IsMaxErrorCount(t.Link) {
 				log.Printf("文件名：%v 超出最大尝试次数\n", t.Name)
 				return
 			}
-
+			time.Sleep(time.Second * time.Duration(config.GetConfig().TaskErrorDuration))
 			c.Submit(t)
 		}
 

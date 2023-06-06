@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -21,11 +22,13 @@ type Task struct {
 
 	ext         string // 该文件类型
 	IsM3U8child bool   // 是否为m3u8的视频任务
+	M3U8Dir     string // 下载的 m3u8 文件目录
 }
 
 func NewTask(name, link string) Task {
-	index := strings.LastIndex(link, ".")
-	ext := link[index+1:]
+	u, _ := url.Parse(link)
+	index := strings.LastIndex(u.Path, ".")
+	ext := u.Path[index+1:]
 
 	return Task{
 		Name: name,
@@ -77,8 +80,9 @@ func (t *Task) m3u8() error {
 	go base.NewTicker(stop, func() {
 		if t.IsM3U8child {
 			// m3u8组任务打印信息
-			core.Doing(t.Name, fmt.Sprintf("分片下载进度(%d/%d) %.2f ",
-				core.doneCount, core.groupCount, float64(core.doneCount)*100/float64(core.groupCount))+"%")
+			log.Println(fmt.Sprintf("%s 分片下载进度(%d/%d) %.2f ",
+				t.Name, core.doneCount, core.groupCount,
+				float64(core.doneCount)*100/float64(core.groupCount)) + "%")
 		}
 	})
 
@@ -89,14 +93,15 @@ func (t *Task) m3u8() error {
 		fn := fmt.Sprintf("%s_part_%d", t.Name, index)
 		var link string
 		if video.CompleteURL(segment.URI) {
-			link = m3u8Downloader.M3u8BaseLink + segment.URI
-		} else {
 			link = segment.URI
+		} else {
+			link = m3u8Downloader.M3u8BaseLink + segment.URI
 		}
 		// 构建每个分片的task，执行
-		t := NewTask(fn, link)
-		t.IsM3U8child = true
-		core.Submit(&t)
+		t1 := NewTask(fn, link)
+		t1.IsM3U8child = true
+		t1.M3U8Dir = filepath.Join(config.GetConfig().SaveDir, t.Name)
+		core.Submit(&t1)
 	}
 	log.Printf("该电影时长 %s \n", m3u8.CalculationTime(playbackDuration))
 
@@ -115,12 +120,12 @@ func (t *Task) m3u8() error {
 func (t *Task) video() error {
 	var dir string
 	if t.IsM3U8child {
-		dir = filepath.Join(config.GetConfig().SaveDir, t.Name)
+		dir = t.M3U8Dir
 	} else {
 		dir = config.GetConfig().SaveDir
 	}
 
-	savePath := filepath.Join(dir, fmt.Sprintf("%s.%s", t.Name))
+	savePath := filepath.Join(dir, fmt.Sprintf("%s.%s", t.Name, t.ext))
 	d := video.NewDownloader(t.Name, t.Link, savePath)
 	if err := d.Execute(t.IsM3U8child); err != nil {
 		return err

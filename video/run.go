@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"dv/base"
 	"dv/config"
+	"dv/table"
 	"errors"
 	"fmt"
 	"io"
@@ -24,8 +25,6 @@ type DownVideo struct {
 	existSize             int64 // 已存在的文件断点续传大小
 	responseContentLength int64 // 该请求仍需要下载长度
 	fileFutureSize        int64 // 文件总大小
-
-	setting VideoSetting
 
 	stop chan struct{} // 停止打印下载信息
 }
@@ -146,8 +145,8 @@ func (d *DownVideo) rw(read io.Reader, write io.Writer) error {
 }
 
 func (d *DownVideo) decode(data []byte) []byte {
-	if strings.Contains(d.setting.CryptoMethod, "AES") {
-		return base.AESDecrypt(data, d.setting.CryptoKey)
+	if key, ok := table.CryptoVedioTable.Get(d.Name); ok {
+		return base.AESDecrypt(data, key)
 	}
 
 	return data
@@ -165,7 +164,7 @@ func (d *DownVideo) printDownloadMessage() {
 		case <-ticker.C:
 			nowRS := float64(d.readSize)
 			score := (nowRS + float64(d.existSize)) / float64(d.fileFutureSize) * 100
-			dataByTime := (nowRS - lastNowRS) / float64(base.GetInterval()) // 间隔时间内下载的数据, byte
+			dataByTime := (nowRS - lastNowRS) / float64(1) // 间隔时间内下载的数据, byte
 			speed, unit := unitReturn(dataByTime)
 			msg = fmt.Sprintf("百分比 %.2f 速度 %.3f %s/s | %.3f GB", score, speed, unit, fileSize)
 			lastNowRS = nowRS

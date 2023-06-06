@@ -17,9 +17,10 @@ func (c *CryptoTable) Set(key string, value []byte) {
 	c.body[key] = value
 }
 
-func (c *CryptoTable) Get(key string) []byte {
+func (c *CryptoTable) Get(key string) ([]byte, bool) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
-	return c.body[key]
+	v, ok := c.body[key]
+	return v, ok
 }
