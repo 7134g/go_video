@@ -27,3 +27,9 @@ var urlRegexp, _ = regexp.Compile(`^http[s]{0,1}://`)
 func CompleteURL(u string) bool {
 	return urlRegexp.MatchString(u)
 }
+
+var nameRegexp, _ = regexp.Compile(`_part_\d+`)
+
+func ReplaceName(name string) string {
+	return nameRegexp.ReplaceAllString(name, "")
+}

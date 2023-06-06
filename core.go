@@ -1,6 +1,7 @@
 package main
 
 import (
+	"dv/base"
 	"dv/config"
 	"dv/table"
 	"log"
@@ -38,6 +39,7 @@ func (c *Core) Run(ts []Task) {
 func (c *Core) Wait() {
 	c.wg.Wait()
 	//log.Println("本次运行结束")
+	log.Println("失败任务：", table.RangeErrorTask())
 }
 
 func (c *Core) Submit(t *Task) {
@@ -51,6 +53,7 @@ func (c *Core) Submit(t *Task) {
 			log.Println(t.Name, err)
 			table.IncreaseErrorCount(t.Link)
 			if table.IsMaxErrorCount(t.Link) {
+				table.AddErrorTask(base.ReplaceName(t.Name))
 				log.Printf("文件名：%v 超出最大尝试次数\n", t.Name)
 				return
 			}

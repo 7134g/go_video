@@ -11,7 +11,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -101,7 +100,7 @@ func (d DownVideo) Execute(isM3u8Child bool) error {
 			return err
 		}
 
-		name := re.ReplaceAllString(d.Name, "")
+		name := base.ReplaceName(d.Name)
 		table.M3U8DownloadSpeed.Increase(name, uint(write.Len()))
 
 		return nil
@@ -152,10 +151,8 @@ func (d *DownVideo) rw(read io.Reader, write io.Writer) error {
 	}
 }
 
-var re, _ = regexp.Compile(`_part_\d+`)
-
 func (d *DownVideo) decode(data []byte) []byte {
-	name := re.ReplaceAllString(d.Name, "")
+	name := base.ReplaceName(d.Name)
 
 	if key, ok := table.CryptoVideoTable.Get(name); ok {
 		return base.AESDecrypt(data, key)

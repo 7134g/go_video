@@ -33,3 +33,18 @@ func IsMaxErrorCount(key string) bool {
 
 	return count.(uint) > config.GetConfig().TaskErrorMaxCount
 }
+
+var errorTask sync.Map
+
+func AddErrorTask(key string) {
+	errorTask.Store(key, struct{}{})
+}
+
+func RangeErrorTask() []string {
+	ts := make([]string, 0)
+	errorTask.Range(func(key, value interface{}) bool {
+		ts = append(ts, key.(string))
+		return true
+	})
+	return ts
+}
