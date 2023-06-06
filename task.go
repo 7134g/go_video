@@ -78,12 +78,10 @@ func (t *Task) m3u8() error {
 	stop := make(chan struct{})
 	defer close(stop)
 	go base.NewTicker(stop, func() {
-		if t.IsM3U8child {
-			// m3u8组任务打印信息
-			log.Println(fmt.Sprintf("%s 分片下载进度(%d/%d) %.2f ",
-				t.Name, core.doneCount, core.groupCount,
-				float64(core.doneCount)*100/float64(core.groupCount)) + "%")
-		}
+		// m3u8组任务打印信息
+		log.Println(fmt.Sprintf("%s 分片下载进度(%d/%d) %.2f ",
+			t.Name, core.doneCount, core.groupCount,
+			float64(core.doneCount)*100/float64(core.groupCount)) + "%")
 	})
 
 	var playbackDuration float32 // 该视频总时间
