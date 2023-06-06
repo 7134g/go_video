@@ -26,7 +26,7 @@ func NewCore() Core {
 	}
 }
 
-func (c *Core) Run(tl []Cell) {
+func (c *Core) Run(tl []Task) {
 	for _, t := range tl {
 		c.Submit(&t)
 	}
@@ -37,7 +37,7 @@ func (c *Core) Wait() {
 	log.Println("本次运行结束")
 }
 
-func (c *Core) Submit(t *Cell) {
+func (c *Core) Submit(t *Task) {
 	c.wg.Add(1)
 	c.vacancy <- struct{}{}
 	go func() {

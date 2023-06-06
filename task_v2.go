@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-type Cell struct {
+type Task struct {
 	Name string
 	Link string
 
@@ -23,30 +23,30 @@ type Cell struct {
 	IsM3U8child bool   // 是否为m3u8的视频任务
 }
 
-func NewCell(name, link string) Cell {
+func NewTask(name, link string) Task {
 	index := strings.LastIndex(link, ".")
 	ext := link[index+1:]
 
-	return Cell{
+	return Task{
 		Name: name,
 		Link: link,
 		ext:  ext,
 	}
 }
 
-func (c *Cell) Do() error {
-	switch c.ext {
+func (t *Task) Do() error {
+	switch t.ext {
 	case "m3u8":
-		return c.m3u8()
+		return t.m3u8()
 	default:
-		return c.video()
+		return t.video()
 	}
 }
 
-func (c *Cell) m3u8() error {
+func (t *Task) m3u8() error {
 	beginTime := time.Now()
 	// 解析m3u8，得到所有分片地址
-	m3u8Downloader := m3u8.NewDownloader(c.Name, c.Link)
+	m3u8Downloader := m3u8.NewDownloader(t.Name, t.Link)
 	p, err := m3u8Downloader.ExtractContain()
 	if err != nil {
 		return err
@@ -54,7 +54,7 @@ func (c *Cell) m3u8() error {
 	segments := p.Segments
 
 	// 创建存放所有分片的文件夹
-	saveDir := filepath.Join(config.GetConfig().SaveDir, c.Name)
+	saveDir := filepath.Join(config.GetConfig().SaveDir, t.Name)
 	info, err := os.Stat(saveDir)
 	if err != nil || !info.IsDir() {
 		_ = os.MkdirAll(saveDir, os.ModeDir)
@@ -75,9 +75,9 @@ func (c *Cell) m3u8() error {
 	stop := make(chan struct{})
 	defer close(stop)
 	go base.NewTicker(stop, func() {
-		if c.IsM3U8child {
+		if t.IsM3U8child {
 			// m3u8组任务打印信息
-			core.Doing(c.Name, fmt.Sprintf("分片下载进度(%d/%d) %.2f ",
+			core.Doing(t.Name, fmt.Sprintf("分片下载进度(%d/%d) %.2f ",
 				core.doneCount, core.groupCount, float64(core.doneCount)*100/float64(core.groupCount))+"%")
 		}
 	})
@@ -86,15 +86,15 @@ func (c *Cell) m3u8() error {
 	for index, segment := range segments {
 		playbackDuration += segment.Duration
 
-		fn := fmt.Sprintf("%s_part_%d", c.Name, index)
+		fn := fmt.Sprintf("%s_part_%d", t.Name, index)
 		var link string
 		if video.CompleteURL(segment.URI) {
 			link = m3u8Downloader.M3u8BaseLink + segment.URI
 		} else {
 			link = segment.URI
 		}
-		// 构建每个分片的cell，执行
-		t := NewCell(fn, link)
+		// 构建每个分片的task，执行
+		t := NewTask(fn, link)
 		t.IsM3U8child = true
 		core.Submit(&t)
 	}
@@ -107,29 +107,29 @@ func (c *Cell) m3u8() error {
 	}
 	_ = os.RemoveAll(saveDir) // 删除文件夹
 
-	log.Printf("%s 任务完成,耗时 %s\n", c.Name, time.Now().Sub(beginTime))
+	log.Printf("%s 任务完成,耗时 %s\n", t.Name, time.Now().Sub(beginTime))
 
 	return nil
 }
 
-func (c *Cell) video() error {
+func (t *Task) video() error {
 	var dir string
-	if c.IsM3U8child {
-		dir = filepath.Join(config.GetConfig().SaveDir, c.Name)
+	if t.IsM3U8child {
+		dir = filepath.Join(config.GetConfig().SaveDir, t.Name)
 	} else {
 		dir = config.GetConfig().SaveDir
 	}
 
-	savePath := filepath.Join(dir, fmt.Sprintf("%s.%s", c.Name))
-	d := video.NewDownloader(c.Name, c.Link, savePath)
-	if err := d.Execute(c.IsM3U8child); err != nil {
+	savePath := filepath.Join(dir, fmt.Sprintf("%s.%s", t.Name))
+	d := video.NewDownloader(t.Name, t.Link, savePath)
+	if err := d.Execute(t.IsM3U8child); err != nil {
 		return err
 	}
 	return nil
 }
 
-func ParseTaskList() ([]Cell, error) {
-	cells := make([]Cell, 0)
+func ParseTaskList() ([]Task, error) {
+	tasks := make([]Task, 0)
 	bs, err := os.ReadFile(config.GetConfig().TaskList)
 	if err != nil {
 		return nil, err
@@ -154,10 +154,10 @@ func ParseTaskList() ([]Cell, error) {
 			log.Println("错误值：", value)
 			continue
 		}
-		cells = append(cells, NewCell(key, value))
+		tasks = append(tasks, NewTask(key, value))
 
 		i++
 	}
 
-	return cells, nil
+	return tasks, nil
 }
