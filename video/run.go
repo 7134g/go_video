@@ -101,6 +101,9 @@ func (d DownVideo) Execute(isM3u8Child bool) error {
 			return err
 		}
 
+		name := re.ReplaceAllString(d.Name, "")
+		table.M3U8DownloadSpeed.Increase(name, uint(write.Len()))
+
 		return nil
 	}
 
@@ -174,13 +177,13 @@ func (d *DownVideo) printDownloadMessage() {
 			nowRS := float64(d.readSize)
 			score := (nowRS + float64(d.existSize)) / float64(d.fileFutureSize) * 100
 			dataByTime := (nowRS - lastNowRS) / float64(3) // 间隔时间内下载的数据, byte
-			speed, unit := unitReturn(dataByTime)
+			speed, unit := base.UnitReturn(dataByTime)
 			msg = fmt.Sprintf("百分比 %.2f 速度 %.3f %s/s | %.3f GB", score, speed, unit, fileSize)
 			lastNowRS = nowRS
 			log.Printf("%s %s\n", d.Name, msg)
 		case <-d.stop:
 			averageSpeed := float64(d.readSize) / float64(time.Now().Unix()-now) // 本次每秒下载字节数
-			speed, unit := unitReturn(averageSpeed)
+			speed, unit := base.UnitReturn(averageSpeed)
 			msg = fmt.Sprintf("平均速度 %.2f %s/s <======== done", speed, unit)
 			log.Printf("%s %s\n", d.Name, msg)
 			return

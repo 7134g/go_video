@@ -1,10 +1,13 @@
 package video
 
-import "testing"
+import (
+	"dv/base"
+	"testing"
+)
 
 func TestCompleteURL(t *testing.T) {
-	t.Log(CompleteURL("http://www.baidu.com"))
-	t.Log(CompleteURL("https://www.baidu.com"))
-	t.Log(CompleteURL("www.baidu.com"))
+	t.Log(base.CompleteURL("http://www.baidu.com"))
+	t.Log(base.CompleteURL("https://www.baidu.com"))
+	t.Log(base.CompleteURL("www.baidu.com"))
 
 }

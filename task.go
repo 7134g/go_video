@@ -4,6 +4,7 @@ import (
 	"dv/base"
 	"dv/config"
 	"dv/m3u8"
+	"dv/table"
 	"dv/video"
 	"errors"
 	"fmt"
@@ -77,12 +78,29 @@ func (t *Task) m3u8() error {
 	// 输出进度消息
 	stop := make(chan struct{})
 	defer close(stop)
-	go base.NewTicker(stop, func() {
-		// m3u8组任务打印信息
-		log.Println(fmt.Sprintf("%s 分片下载进度(%d/%d) %.2f ",
-			t.Name, core.doneCount, core.groupCount,
-			float64(core.doneCount)*100/float64(core.groupCount)) + "%")
-	})
+	go func() {
+		ticker := time.NewTicker(time.Second * 3)
+		defer ticker.Stop()
+		var lastNowRS uint
+		for {
+			select {
+			case <-stop:
+				return
+			case <-ticker.C:
+				// m3u8组任务打印信息
+				nv, _ := table.M3U8DownloadSpeed.Get(t.Name)
+				dataByTime := float64(nv-lastNowRS) / float64(3)
+				speed, unit := base.UnitReturn(dataByTime)
+				log.Println(fmt.Sprintf("%s 分片下载进度(%d/%d) %.2f %s %.2f ",
+					t.Name,
+					core.doneCount, core.groupCount,
+					speed, unit,
+					float64(core.doneCount)*100/float64(core.groupCount),
+				) + "%")
+				lastNowRS = nv
+			}
+		}
+	}()
 
 	var playbackDuration float32 // 该视频总时间
 	for index, segment := range segments {
@@ -90,7 +108,7 @@ func (t *Task) m3u8() error {
 
 		fn := fmt.Sprintf("%s_part_%d", t.Name, index)
 		var link string
-		if video.CompleteURL(segment.URI) {
+		if base.CompleteURL(segment.URI) {
 			link = segment.URI
 		} else {
 			link = m3u8Downloader.M3u8BaseLink + segment.URI
@@ -110,7 +128,7 @@ func (t *Task) m3u8() error {
 	}
 	_ = os.RemoveAll(saveDir) // 删除文件夹
 
-	log.Printf("%s 任务完成,耗时 %s\n", t.Name, time.Now().Sub(beginTime))
+	log.Printf("%s ===================> 任务完成,耗时 %s\n", t.Name, time.Now().Sub(beginTime))
 
 	return nil
 }
