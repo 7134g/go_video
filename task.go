@@ -91,7 +91,7 @@ func (t *Task) m3u8() error {
 				nv, _ := table.M3U8DownloadSpeed.Get(t.Name)
 				dataByTime := float64(nv-lastNowRS) / float64(3)
 				speed, unit := base.UnitReturn(dataByTime)
-				log.Println(fmt.Sprintf("%s 分片下载进度(%d/%d) %.2f %s %.2f ",
+				log.Println(fmt.Sprintf("%s 分片下载进度(%d/%d) %.2f 速度：%s/s 完成度：%.2f ",
 					t.Name,
 					core.doneCount, core.groupCount,
 					speed, unit,
@@ -107,14 +107,6 @@ func (t *Task) m3u8() error {
 		playbackDuration += segment.Duration
 
 		fn := fmt.Sprintf("%s_part_%d", t.Name, index)
-		//var link string
-		//
-		//if base.CompleteURL(segment.URI) {
-		//	link = segment.URI
-		//} else {
-		//	link = m3u8Downloader.M3u8BaseLink + segment.URI
-		//}
-
 		link, err := url.Parse(m3u8Downloader.Link)
 		if err != nil {
 			return err
