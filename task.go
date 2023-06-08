@@ -107,14 +107,24 @@ func (t *Task) m3u8() error {
 		playbackDuration += segment.Duration
 
 		fn := fmt.Sprintf("%s_part_%d", t.Name, index)
-		var link string
-		if base.CompleteURL(segment.URI) {
-			link = segment.URI
-		} else {
-			link = m3u8Downloader.M3u8BaseLink + segment.URI
+		//var link string
+		//
+		//if base.CompleteURL(segment.URI) {
+		//	link = segment.URI
+		//} else {
+		//	link = m3u8Downloader.M3u8BaseLink + segment.URI
+		//}
+
+		link, err := url.Parse(m3u8Downloader.Link)
+		if err != nil {
+			return err
+		}
+		link, err = link.Parse(segment.URI)
+		if err != nil {
+			return err
 		}
 		// 构建每个分片的task，执行
-		t1 := NewTask(fn, link)
+		t1 := NewTask(fn, link.String())
 		t1.IsM3U8child = true
 		t1.M3U8Dir = filepath.Join(config.GetConfig().SaveDir, t.Name)
 		core.Submit(&t1)

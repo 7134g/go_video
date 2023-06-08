@@ -7,16 +7,16 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 type Dm3u8 struct {
 	Name string
 	Link string
 
-	M3u8BaseLink string // 分片所使用的基础链接地址
+	//M3u8BaseLink string // 分片所使用的基础链接地址
 }
 
 func NewDownloader(name, link string) Dm3u8 {
@@ -29,7 +29,7 @@ func NewDownloader(name, link string) Dm3u8 {
 // ExtractContain 提取m3u8内所有内容
 func (d *Dm3u8) ExtractContain() (*M3u8, error) {
 	// 设置当前基础链接
-	d.M3u8BaseLink = strings.TrimSuffix(d.Link, d.Link[strings.LastIndex(d.Link, "/")+1:])
+	//d.M3u8BaseLink = strings.TrimSuffix(d.Link, d.Link[strings.LastIndex(d.Link, "/")+1:])
 
 	// 构建请求
 	res, err := http.NewRequest(http.MethodGet, d.Link, nil)
@@ -45,6 +45,10 @@ func (d *Dm3u8) ExtractContain() (*M3u8, error) {
 		return nil, err
 	}
 
+	if resp.StatusCode != 200 {
+		return nil, errors.New(resp.Status)
+	}
+
 	// 处理请求
 	decode, err := parse(resp.Body)
 	if err != nil {
@@ -56,7 +60,15 @@ func (d *Dm3u8) ExtractContain() (*M3u8, error) {
 		if index < 0 {
 			return nil, errors.New("解析失败")
 		}
-		d.Link = d.M3u8BaseLink + decode.MasterPlaylist[index].URI
+		link, err := url.Parse(d.Link)
+		if err != nil {
+			return nil, err
+		}
+		link, err = link.Parse(decode.MasterPlaylist[index].URI)
+		if err != nil {
+			return nil, err
+		}
+		d.Link = link.String()
 		return d.ExtractContain()
 	}
 
@@ -65,7 +77,15 @@ func (d *Dm3u8) ExtractContain() (*M3u8, error) {
 			continue
 		}
 		// 获取加密密匙
-		resp, err := config.Client.Get(d.M3u8BaseLink + key.URI)
+		link, err := url.Parse(d.Link)
+		if err != nil {
+			return nil, err
+		}
+		aesLink, err := link.Parse(key.URI)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := config.Client.Get(aesLink.String())
 		if resp != nil {
 			defer resp.Body.Close()
 		}
