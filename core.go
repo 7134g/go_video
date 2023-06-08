@@ -39,7 +39,9 @@ func (c *Core) Run(ts []Task) {
 func (c *Core) Wait() {
 	c.wg.Wait()
 	//log.Println("本次运行结束")
-	log.Println("失败任务：", table.RangeErrorTask())
+	if len(table.RangeErrorTask()) != 0 {
+		log.Println("失败任务：", table.RangeErrorTask())
+	}
 }
 
 func (c *Core) Submit(t *Task) {
@@ -59,6 +61,7 @@ func (c *Core) Submit(t *Task) {
 			}
 			time.Sleep(time.Second * time.Duration(config.GetConfig().TaskErrorDuration))
 			c.Submit(t)
+			return
 		}
 
 		// 完成
