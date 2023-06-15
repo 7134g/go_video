@@ -124,6 +124,18 @@ func (t *Task) m3u8() error {
 	log.Printf("该电影时长 %s \n", m3u8.CalculationTime(playbackDuration))
 
 	core.Wait()
+
+	ts := table.GetListErrorTask(t.Name)
+	for _, errorTask := range ts {
+		et := errorTask.(Task)
+		core.Submit(&et)
+	}
+
+	if core.doneCount != len(segments) {
+		log.Printf("任务下载不完整(%d\\%d)\n", core.doneCount, len(segments))
+		return errors.New("任务失败了！！！！！！！！！！！！！！！")
+	}
+
 	// 合并所有分片
 	if err := m3u8Downloader.MergeFiles(saveDir); err != nil {
 		return err

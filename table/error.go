@@ -1,6 +1,7 @@
 package table
 
 import (
+	"dv/base"
 	"dv/config"
 	"sync"
 )
@@ -36,14 +37,28 @@ func IsMaxErrorCount(key string) bool {
 
 var errorTask sync.Map
 
-func AddErrorTask(key string) {
-	errorTask.Store(key, struct{}{})
+func AddErrorTask(key string, value interface{}) {
+	errorTask.Store(key, value)
 }
 
-func RangeErrorTask() []string {
-	ts := make([]string, 0)
+func GetListErrorTask(key string) []interface{} {
+	ts := make([]interface{}, 0)
+	errorTask.Range(func(k, v any) bool {
+		if base.ReplaceName(k.(string)) == key {
+			ts = append(ts, v)
+			errorTask.Delete(k)
+		}
+
+		return true
+	})
+
+	return ts
+}
+
+func RangeErrorTask() []interface{} {
+	ts := make([]interface{}, 0)
 	errorTask.Range(func(key, value interface{}) bool {
-		ts = append(ts, key.(string))
+		ts = append(ts, key)
 		return true
 	})
 	return ts

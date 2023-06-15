@@ -1,7 +1,6 @@
 package main
 
 import (
-	"dv/base"
 	"dv/config"
 	"dv/table"
 	"log"
@@ -55,7 +54,7 @@ func (c *Core) Submit(t *Task) {
 			log.Println(t.Name, err)
 			table.IncreaseErrorCount(t.Link)
 			if table.IsMaxErrorCount(t.Link) {
-				table.AddErrorTask(base.ReplaceName(t.Name))
+				table.AddErrorTask(t.Name, t)
 				log.Printf("文件名：%v 超出最大尝试次数\n", t.Name)
 				return
 			}

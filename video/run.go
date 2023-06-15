@@ -88,14 +88,14 @@ func (d DownVideo) Execute(isM3u8Child bool) error {
 			return err
 		}
 
-		// 从头开始写
 		data := d.decode(write.Bytes())
 		if data == nil {
 			return errors.New("视频格式解析失败")
 		}
-		if _, err := f.Seek(0, 0); err != nil {
-			return err
-		}
+		// 从头开始写
+		_ = f.Close()
+		f, err = os.Create(d.savePath)
+		defer f.Close()
 		if _, err = f.Write(data); err != nil {
 			return err
 		}
