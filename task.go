@@ -77,7 +77,6 @@ func (t *Task) m3u8() error {
 
 	// 输出进度消息
 	stop := make(chan struct{})
-	defer close(stop)
 	go func() {
 		ticker := time.NewTicker(time.Second * 3)
 		defer ticker.Stop()
@@ -134,6 +133,9 @@ func (t *Task) m3u8() error {
 		log.Printf("任务下载不完整(%d\\%d)\n", core.doneCount, len(segments))
 		return errors.New("任务失败了！！！！！！！！！！！！！！！")
 	}
+	close(stop)
+
+	log.Println("开始合并所有分片")
 
 	// 合并所有分片
 	if config.GetConfig().UseFFmpeg {
