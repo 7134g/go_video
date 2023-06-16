@@ -22,7 +22,7 @@ func UnitReturn(value float64) (float64, string) {
 	}
 }
 
-var nameRegexp, _ = regexp.Compile(`_part_\d+`)
+var nameRegexp, _ = regexp.Compile(`\d+_part_`)
 
 func ReplaceName(name string) string {
 	return nameRegexp.ReplaceAllString(name, "")

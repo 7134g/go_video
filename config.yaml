@@ -18,6 +18,10 @@ concurrency: 5
 concurrency_m3u8: 10
 # 结束后清空任务列表
 task_clear: false
+# 使用ffmpeg进行合并分片
+use_ffmpeg: true
+# ffmpeg程序所在地址
+ffmpeg_path: ffmpeg.exe
 
 # 请求头相关
 headers:

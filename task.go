@@ -106,7 +106,7 @@ func (t *Task) m3u8() error {
 	for index, segment := range segments {
 		playbackDuration += segment.Duration
 
-		fn := fmt.Sprintf("%s_part_%d", t.Name, index)
+		fn := fmt.Sprintf("%06d_part_%s", index, t.Name)
 		link, err := url.Parse(m3u8Downloader.Link)
 		if err != nil {
 			return err
@@ -122,13 +122,12 @@ func (t *Task) m3u8() error {
 		core.Submit(&t1)
 	}
 	log.Printf("该电影时长 %s \n", m3u8.CalculationTime(playbackDuration))
-
 	core.Wait()
 
+	// 刚刚失败的分片，再一次重试
 	ts := table.GetListErrorTask(t.Name)
 	for _, errorTask := range ts {
-		et := errorTask.(Task)
-		core.Submit(&et)
+		core.Submit(errorTask.(*Task))
 	}
 
 	if core.doneCount != len(segments) {
@@ -137,10 +136,16 @@ func (t *Task) m3u8() error {
 	}
 
 	// 合并所有分片
-	if err := m3u8Downloader.MergeFiles(saveDir); err != nil {
-		return err
+	if config.GetConfig().UseFFmpeg {
+		if err := base.MergeFiles(saveDir, t.Name, config.GetConfig().FFmpegPath); err != nil {
+			return err
+		}
+	} else {
+		if err := m3u8Downloader.MergeFiles(saveDir); err != nil {
+			return err
+		}
+		_ = os.RemoveAll(saveDir) // 删除文件夹
 	}
-	_ = os.RemoveAll(saveDir) // 删除文件夹
 
 	log.Printf("%s ===================> 任务完成,耗时 %s\n", t.Name, time.Now().Sub(beginTime))
 

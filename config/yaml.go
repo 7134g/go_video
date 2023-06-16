@@ -24,6 +24,8 @@ type ProjectConfig struct {
 	HistoryDir string `yaml:"history_dir"`
 	LogDir     string `yaml:"log_dir"`
 	LogStatus  bool   `yaml:"log_status"`
+	UseFFmpeg  bool   `yaml:"use_ffmpeg"`
+	FFmpegPath string `yaml:"ffmpeg_path"`
 
 	TaskList          string `yaml:"task_list"`            // 任务清单
 	TaskErrorMaxCount uint   `yaml:"task_error_max_count"` // 任务最大数

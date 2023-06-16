@@ -10,7 +10,7 @@ import (
 
 func main() {
 	defer func() {
-		if err := recover(); err != nil {
+		if err := any(recover()); err != nil {
 			log.Println(err)
 		}
 		log.Println("按任意键结束……")
