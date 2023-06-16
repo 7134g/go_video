@@ -146,8 +146,9 @@ func (t *Task) m3u8() error {
 		if err := m3u8Downloader.MergeFiles(saveDir); err != nil {
 			return err
 		}
-		_ = os.RemoveAll(saveDir) // 删除文件夹
 	}
+
+	_ = os.RemoveAll(saveDir) // 删除文件夹
 
 	log.Printf("%s ===================> 任务完成,耗时 %s\n", t.Name, time.Now().Sub(beginTime))
 
