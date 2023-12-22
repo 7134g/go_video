@@ -10,12 +10,21 @@ import (
 	"sync"
 )
 
+var (
+	tc       *TaskControl
+	tcConfig taskControlConfig
+)
+
 type TaskControl struct {
+	wg      sync.WaitGroup
 	mux     sync.Mutex
 	running bool
 	ctx     context.Context
 	cancel  context.CancelFunc
+	vacancy chan struct{} // 并发控制
+}
 
+type taskControlConfig struct {
 	// http
 	Transport http.RoundTripper
 	Headers   http.Header
@@ -26,17 +35,21 @@ type TaskControl struct {
 
 func NewTaskControl(c config.Config) *TaskControl {
 	ctx, cancel := context.WithCancel(context.Background())
-
-	return &TaskControl{
+	tc = &TaskControl{
+		wg:      sync.WaitGroup{},
 		mux:     sync.Mutex{},
 		running: false,
 		ctx:     ctx,
 		cancel:  cancel,
-
+		vacancy: make(chan struct{}, c.TaskControlConfig.Concurrency),
+	}
+	tcConfig = taskControlConfig{
 		Transport: getHttpProxy(c.HttpConfig),
 		Headers:   getHeader(c.HttpConfig),
 		cfg:       c.TaskControlConfig,
 	}
+
+	return tc
 }
 
 func getHttpProxy(c config.HttpConfig) http.RoundTripper {

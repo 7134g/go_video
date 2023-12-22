@@ -2,6 +2,7 @@ package table
 
 import "sync"
 
+// CryptoVideoTable 存放视频加密的密钥
 var CryptoVideoTable = CryptoTable{
 	lock: sync.RWMutex{},
 	body: make(map[string][]byte),
