@@ -17,10 +17,11 @@ func newWork(task model.Task) *work {
 
 func (w work) parseTask() *cell {
 	c := &cell{
-		TaskId: w.task.ID,
-		Name:   w.task.Name,
-		Url:    w.task.Data,
-		Dir:    tcConfig.cfg.SaveDir,
+		TaskId:   w.task.ID,
+		TaskName: w.task.Name,
+		Name:     w.task.Name,
+		Url:      w.task.Data,
+		Dir:      tcConfig.cfg.SaveDir,
 
 		client: &http.Client{Transport: tcConfig.Transport},
 		header: tcConfig.Headers,
@@ -49,5 +50,6 @@ func (w work) parseVideo(c *cell) *cell {
 }
 
 func (w work) formatCurl() (string, http.Header) {
+	// todo
 	return "", nil
 }

@@ -26,14 +26,14 @@ func NewRunLogic(ctx context.Context, svcCtx *svc.ServiceContext) *RunLogic {
 func (l *RunLogic) Run(req *types.TaskRunRequest) (resp *types.TaskRunResponse, err error) {
 	if req.Stop {
 		l.svcCtx.TaskControl.Stop()
-		return &types.TaskRunResponse{"正在停止中"}, err
+		return &types.TaskRunResponse{Message: "正在停止中"}, err
 	}
 
 	task := make([]model.Task, 0)
 	l.svcCtx.TaskModel.DB.Where("status != ?", model.StatsuSuccess).Find(&task)
 
 	if l.svcCtx.TaskControl.GetStatus() {
-		return &types.TaskRunResponse{"正在执行中"}, err
+		return &types.TaskRunResponse{Message: "正在执行中"}, err
 	}
 	go l.svcCtx.TaskControl.Run(task)
 

@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/tls"
 	"dv/internel/serve/api/internal/config"
+	"dv/internel/serve/api/internal/db"
+	"dv/internel/serve/api/internal/model"
 	"log"
 	"net/http"
 	"net/url"
@@ -12,15 +14,17 @@ import (
 
 var (
 	tc       *TaskControl
-	tcConfig taskControlConfig
+	tcConfig *taskControlConfig
+	errModel *model.ErrorModel
 )
 
 type TaskControl struct {
-	wg      sync.WaitGroup
-	mux     sync.Mutex
-	running bool
-	ctx     context.Context
-	cancel  context.CancelFunc
+	wg     sync.WaitGroup
+	mux    sync.Mutex
+	ctx    context.Context
+	cancel context.CancelFunc
+
+	running bool          // 是否正常运行
 	vacancy chan struct{} // 并发控制
 }
 
@@ -34,20 +38,19 @@ type taskControlConfig struct {
 }
 
 func NewTaskControl(c config.Config) *TaskControl {
-	ctx, cancel := context.WithCancel(context.Background())
 	tc = &TaskControl{
 		wg:      sync.WaitGroup{},
 		mux:     sync.Mutex{},
 		running: false,
-		ctx:     ctx,
-		cancel:  cancel,
 		vacancy: make(chan struct{}, c.TaskControlConfig.Concurrency),
 	}
-	tcConfig = taskControlConfig{
+	tcConfig = &taskControlConfig{
 		Transport: getHttpProxy(c.HttpConfig),
 		Headers:   getHeader(c.HttpConfig),
 		cfg:       c.TaskControlConfig,
 	}
+
+	errModel = model.NewErrorModel(db.GetDB())
 
 	return tc
 }

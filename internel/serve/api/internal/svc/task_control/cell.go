@@ -1,7 +1,6 @@
 package task_control
 
 import (
-	"dv/config"
 	"dv/internel/serve/api/internal/svc/task_control/m3u8"
 	"fmt"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -16,10 +15,11 @@ import (
 type cell struct {
 	faCell *cell
 
-	TaskId uint
-	Name   string
-	Url    string
-	Dir    string
+	TaskId   uint
+	TaskName string
+	Name     string
+	Url      string
+	Dir      string
 
 	client *http.Client
 	header http.Header
@@ -54,7 +54,6 @@ func (c *cell) DownloadM3u8() error {
 
 	wg := sync.WaitGroup{}
 	for index, segment := range segments {
-		fn := fmt.Sprintf("%06d_part_%s", index, c.Name)
 		link, err := url.Parse(c.Url)
 		if err != nil {
 			return err
@@ -68,9 +67,10 @@ func (c *cell) DownloadM3u8() error {
 			faCell: c,
 			TaskId: c.TaskId,
 
-			Name: fn,
-			Url:  link.String(),
-			Dir:  saveDir,
+			TaskName: c.TaskName,
+			Name:     fmt.Sprintf("%06d_part_%s", index, c.Name),
+			Url:      link.String(),
+			Dir:      saveDir,
 
 			client: c.client,
 			header: c.header,
@@ -85,17 +85,15 @@ func (c *cell) DownloadM3u8() error {
 				<-vacancy
 			}()
 			if err := particle.Do(); err != nil {
-				logx.Error(err)
+				logx.Error(err, saveErrorCellData(particle))
 			}
 		}, true)
 	}
 	wg.Wait()
 
-	// 刚刚失败的分片，再一次重试
-
 	// 合并所有分片
-	if config.GetConfig().UseFFmpeg {
-		if err := m3u8.MergeFilesFfmpeg(saveDir, c.Name, config.GetConfig().FFmpegPath); err != nil {
+	if tcConfig.cfg.UseFfmpeg {
+		if err := m3u8.MergeFilesFfmpeg(saveDir, c.Name, tcConfig.cfg.FfmpegPath); err != nil {
 			return err
 		}
 	} else {
@@ -103,7 +101,6 @@ func (c *cell) DownloadM3u8() error {
 			return err
 		}
 	}
-
 	_ = os.RemoveAll(saveDir) // 删除文件夹
 
 	logx.Info("%s ===================> 任务完成,耗时 %s\n", c.Name, time.Since(now))
@@ -112,5 +109,6 @@ func (c *cell) DownloadM3u8() error {
 }
 
 func (c *cell) DownloadVideo() error {
+	// todo
 	return nil
 }

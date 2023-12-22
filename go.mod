@@ -3,6 +3,7 @@ module dv
 go 1.18
 
 require (
+	github.com/jinzhu/copier v0.4.0
 	github.com/zeromicro/go-zero v1.6.1
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/sqlite v1.5.4
@@ -20,7 +21,6 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/uuid v1.4.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.0 // indirect
-	github.com/jinzhu/copier v0.4.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect

@@ -23,6 +23,10 @@ SaveDir: ./download
 TaskErrorMaxCount: 50
 # 错误时候休眠多久后重试
 TaskErrorDuration: 1
+# 使用ffmpeg进行合并分片
+UseFfmpeg: true
+# ffmpeg程序所在地址
+FfmpegPath: ffmpeg.exe
 
 # 默认请求头
 Headers:

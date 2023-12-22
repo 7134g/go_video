@@ -13,7 +13,8 @@ type ServiceContext struct {
 	Config          config.Config
 	AuthInterceptor rest.Middleware
 
-	TaskModel *model.TaskModel
+	TaskModel  *model.TaskModel
+	ErrorModel *model.ErrorModel
 
 	TaskControl *task_control.TaskControl
 }
@@ -25,6 +26,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		Config:          c,
 		AuthInterceptor: middleware.NewAuthInterceptorMiddleware().Handle,
 		TaskModel:       model.NewTaskModel(db.GetDB()),
+		ErrorModel:      model.NewErrorModel(db.GetDB()),
 		TaskControl:     task_control.NewTaskControl(c),
 	}
 }

@@ -19,10 +19,17 @@ func (c *TaskControl) Stop() {
 	defer c.mux.Unlock()
 
 	c.cancel()
+	c.reset()
+}
+
+func (c *TaskControl) reset() {
+	close(c.vacancy)
+	c.vacancy = make(chan struct{}, tcConfig.cfg.Concurrency)
 	c.running = false
 }
 
 func (c *TaskControl) Run(task []model.Task) {
+	defer c.Stop()
 	c.running = true
 	c.ctx, c.cancel = context.WithCancel(context.Background())
 
@@ -34,18 +41,22 @@ func (c *TaskControl) Run(task []model.Task) {
 		}
 		c.Submit(func() {
 			if err := particle.Do(); err != nil {
-				logx.Error(err)
+				logx.Error(err, saveErrorCellData(particle))
 			}
 		})
 	}
 	c.wg.Wait()
-	c.Stop()
 }
 
 func (c *TaskControl) Submit(fn func(), deriveFlag ...bool) {
 	c.wg.Add(1)
 	if len(deriveFlag) == 0 {
-		c.vacancy <- struct{}{}
+		select {
+		case c.vacancy <- struct{}{}:
+		case <-c.ctx.Done():
+			logx.Info("cancel stop")
+			return
+		}
 	}
 	go threading.GoSafe(func() {
 		defer func() {

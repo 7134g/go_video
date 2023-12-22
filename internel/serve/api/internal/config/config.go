@@ -26,4 +26,6 @@ type TaskControlConfig struct {
 	SaveDir           string // 存储位置
 	TaskErrorMaxCount uint   // 任务连续最大错误次数
 	TaskErrorDuration uint   // 错误时候休眠多久后重试(秒)
+	UseFfmpeg         bool   // 使用ffmpeg进行合并分片
+	FfmpegPath        string // ffmpeg程序所在地址
 }
