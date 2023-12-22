@@ -114,8 +114,8 @@ func getFilesInDir(dirname string) ([]string, error) {
 	return files, err
 }
 
-func MergeFiles(saveDir string) error {
-	outputFilepath := filepath.Join(saveDir, "../", d.Name+".mp4")
+func MergeFiles(name, saveDir string) error {
+	outputFilepath := filepath.Join(saveDir, "../", name+".mp4")
 	outputFile, err := os.Create(outputFilepath)
 	if err != nil {
 		return err

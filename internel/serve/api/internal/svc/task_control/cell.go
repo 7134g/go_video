@@ -1,7 +1,6 @@
 package task_control
 
 import (
-	"dv/base"
 	"dv/config"
 	"dv/internel/serve/api/internal/svc/task_control/m3u8"
 	"fmt"
@@ -96,11 +95,11 @@ func (c *cell) DownloadM3u8() error {
 
 	// 合并所有分片
 	if config.GetConfig().UseFFmpeg {
-		if err := base.MergeFiles(saveDir, c.Name, config.GetConfig().FFmpegPath); err != nil {
+		if err := m3u8.MergeFilesFfmpeg(saveDir, c.Name, config.GetConfig().FFmpegPath); err != nil {
 			return err
 		}
 	} else {
-		if err := m3u8.MergeFiles(saveDir); err != nil {
+		if err := m3u8.MergeFiles(c.Name, saveDir); err != nil {
 			return err
 		}
 	}
