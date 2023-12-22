@@ -1,0 +1,33 @@
+Name: task_serve
+Host: 127.0.0.1
+Port: 8888
+
+Log:
+  Mode: console
+  Encoding: plain
+  Level: debug
+  Path: ./log
+  Stat: false
+  TimeFormat: 2006-01-02 15:04:05
+
+# 数据库
+DB: data.db
+
+# 下载任务并发数
+Concurrency: 5
+# m3u8 片段并发大小为总数的十分之一，例：有120各片段，那么并发请求就是12
+ConcurrencyM3u8: 10
+# 存储位置，不填默认当前目录下download
+SaveDir: ./download
+# 任务连续最大错误次数
+TaskErrorMaxCount: 50
+# 错误时候休眠多久后重试
+TaskErrorDuration: 1
+
+# 默认请求头
+Headers:
+  user_agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+
+# 代理地址
+Proxy: http://127.0.0.1:7890
+ProxyStatus: true

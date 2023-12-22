@@ -1,0 +1,100 @@
+syntax = "v1"
+
+info(
+	title: "type title here"
+	desc: "type desc here"
+	author: "type author here"
+	email: "type email here"
+	version: "type version here"
+)
+
+@server(
+	prefix: /task
+	group: task
+	middleware: AuthInterceptor
+)
+service task_serve {
+	@handler Create
+	post /create (TaskCreateRequest) returns (TaskCreateResponse)
+
+	@handler List
+	get /list (TaskListRequest) returns (TaskListResponse)
+
+	@handler Update
+	post /update (TaskUpdateRequest) returns (TaskUpdateResponse)
+
+	@handler Delete
+	post /delete (TaskDeleteRequest) returns (TaskDeleteResponse)
+
+	@handler Run
+	get /run (TaskRunRequest) returns (TaskRunResponse)
+
+	@handler Status
+	get /status (TaskStatusRequest) returns (TaskStatusResponse)
+}
+
+//type Task {
+//	ID        uint   `json:"id"`
+//	Name      string `json:"name"`       // 任务名字
+//	VideoType string `json:"video_type"` // 视频类型
+//	Type      string `json:"type"`       // 任务类型
+//	Data      string `json:"data"`       // url 或者 curl
+//	Status    uint   `json:"status"`     // 执行状态
+//}
+
+type (
+	TaskCreateRequest {
+		Name      string `json:"name"`                          // 任务名字
+		VideoType string `json:"video_type,options=[mp4,m3u8]"` // 视频类型
+		Type      string `json:"type,options=[url,curl]"`       // 任务类型
+		Data      string `json:"data"`                          // url 或者 curl
+	}
+	TaskCreateResponse {
+	}
+)
+
+type (
+	TaskListRequest {
+	}
+	TaskListResponse {
+		Total int64       `json:"total"`
+		List  interface{} `json:"list"`
+	}
+)
+
+type (
+	TaskUpdateRequest {
+		ID        uint   `json:"id"`
+		Name      string `json:"name,optional"`       // 任务名字
+		VideoType string `json:"video_type,optional"` // 视频类型
+		Type      string `json:"type,optional"`       // 任务类型
+		Data      string `json:"data,optional"`       // url 或者 curl
+	}
+	TaskUpdateResponse {
+	}
+)
+
+type (
+	TaskDeleteRequest {
+		ID uint `json:"id"`
+	}
+	TaskDeleteResponse {
+	}
+)
+
+type (
+	TaskRunRequest {
+		Stop bool `form:"stop"`
+	}
+	TaskRunResponse {
+		Message string `json:"message"`
+	}
+)
+
+type (
+	TaskStatusRequest {
+	}
+	TaskStatusResponse {
+		Status bool `json:"status"` // 执行状态
+	}
+)
