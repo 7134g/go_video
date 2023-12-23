@@ -13,7 +13,6 @@ import (
 )
 
 var (
-	tc       *TaskControl
 	tcConfig *taskControlConfig
 	errModel *model.ErrorModel
 )
@@ -30,29 +29,29 @@ type TaskControl struct {
 
 type taskControlConfig struct {
 	// http
-	Transport http.RoundTripper
-	Headers   http.Header
+	Client  *http.Client
+	Headers http.Header
 
 	// 执行设置
 	cfg config.TaskControlConfig
 }
 
 func NewTaskControl(c config.Config) *TaskControl {
-	tc = &TaskControl{
+	core := &TaskControl{
 		wg:      sync.WaitGroup{},
 		mux:     sync.Mutex{},
 		running: false,
 		vacancy: make(chan struct{}, c.TaskControlConfig.Concurrency),
 	}
 	tcConfig = &taskControlConfig{
-		Transport: getHttpProxy(c.HttpConfig),
-		Headers:   getHeader(c.HttpConfig),
-		cfg:       c.TaskControlConfig,
+		Client:  &http.Client{Transport: getHttpProxy(c.HttpConfig)},
+		Headers: getHeader(c.HttpConfig),
+		cfg:     c.TaskControlConfig,
 	}
 
 	errModel = model.NewErrorModel(db.GetDB())
 
-	return tc
+	return core
 }
 
 func getHttpProxy(c config.HttpConfig) http.RoundTripper {

@@ -3,6 +3,7 @@ package task_control
 import (
 	"context"
 	"dv/internel/serve/api/internal/model"
+	"dv/internel/serve/api/internal/table"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/threading"
 )
@@ -35,36 +36,43 @@ func (c *TaskControl) Run(task []model.Task) {
 
 	for _, m := range task {
 		w := newWork(m)
-		particle := w.parseTask()
+		d, particle := w.parseTask()
 		if particle == nil {
 			continue
 		}
-		c.Submit(func() {
-			if err := particle.Do(); err != nil {
-				logx.Error(err, saveErrorCellData(particle))
-			}
-		})
+
+		c.Submit(particle, d)
 	}
 	c.wg.Wait()
 }
 
-func (c *TaskControl) Submit(fn func(), deriveFlag ...bool) {
+func (c *TaskControl) Submit(fn func() error, d *download) {
 	c.wg.Add(1)
-	if len(deriveFlag) == 0 {
-		select {
-		case c.vacancy <- struct{}{}:
-		case <-c.ctx.Done():
-			logx.Info("cancel stop")
-			return
-		}
+	select {
+	case c.vacancy <- struct{}{}:
+	case <-c.ctx.Done():
+		logx.Info("cancel stop")
+		return
 	}
 	go threading.GoSafe(func() {
 		defer func() {
 			c.wg.Done()
-			if len(deriveFlag) == 0 {
-				<-c.vacancy
-			}
+			<-c.vacancy
 		}()
-		fn()
+
+		if err := fn(); err != nil {
+			table.IncErrCount(d.key)
+			if table.GetErrCount(d.key) >= tcConfig.cfg.TaskErrorMaxCount {
+				logx.Error(saveErrorCellData(d))
+				return
+			} else {
+				logx.Error(d.key, err)
+				c.Submit(fn, d)
+			}
+		}
+
+		logx.Info(d.key, "is done")
+
+		return
 	})
 }

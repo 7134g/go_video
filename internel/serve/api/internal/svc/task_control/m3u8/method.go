@@ -1,87 +1,169 @@
 package m3u8
 
 import (
-	"dv/config"
-	"dv/table"
-	"errors"
+	"bufio"
 	"fmt"
 	"io"
-	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 )
 
-func ExtractContain(name, u string) (*M3u8, error) {
-	// 构建请求
-	res, err := http.NewRequest(http.MethodGet, u, nil)
-	if err != nil {
-		return nil, err
-	}
-	res.Header = config.Header
-	resp, err := config.Client.Do(res)
-	if resp != nil {
-		defer resp.Body.Close()
-	}
-	if err != nil {
-		return nil, err
+func ParseM3u8Data(reader io.Reader) (*M3u8, error) {
+	s := bufio.NewScanner(reader)
+	var lines []string
+	for s.Scan() {
+		lines = append(lines, s.Text())
 	}
 
-	if resp.StatusCode != 200 {
-		return nil, errors.New(resp.Status)
-	}
+	var (
+		i     = 0
+		count = len(lines)
+		m3u8  = &M3u8{
+			Keys: make(map[int]*Key),
+		}
+		keyIndex = 0
 
-	// 处理请求
-	decode, err := parse(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	if len(decode.MasterPlaylist) != 0 {
-		// 下载最高清的视频
-		index := decode.GetMaxBandWidth()
-		if index < 0 {
-			return nil, errors.New("解析失败")
-		}
-		link, err := url.Parse(u)
-		if err != nil {
-			return nil, err
-		}
-		link, err = link.Parse(decode.MasterPlaylist[index].URI)
-		if err != nil {
-			return nil, err
-		}
-		return ExtractContain(name, link.String())
-	}
+		key     *Key
+		seg     *Segment
+		extInf  bool
+		extByte bool
+	)
 
-	for _, key := range decode.Keys {
-		if key.Method == CryptMethodNONE {
+	for ; i < count; i++ {
+		line := strings.TrimSpace(lines[i])
+		if i == 0 {
+			if "#EXTM3U" != line {
+				return nil, fmt.Errorf("invalid m3u8, missing #EXTM3U in line 1")
+			}
 			continue
 		}
-		// 获取加密密匙
-		link, err := url.Parse(u)
-		if err != nil {
-			return nil, err
+		switch {
+		case line == "":
+			continue
+		case strings.HasPrefix(line, "#EXT-X-PLAYLIST-TYPE:"):
+			if _, err := fmt.Sscanf(line, "#EXT-X-PLAYLIST-TYPE:%s", &m3u8.PlaylistType); err != nil {
+				return nil, err
+			}
+			isValid := m3u8.PlaylistType == "" || m3u8.PlaylistType == PlaylistTypeVOD || m3u8.PlaylistType == PlaylistTypeEvent
+			if !isValid {
+				return nil, fmt.Errorf("invalid playlist type: %s, line: %d", m3u8.PlaylistType, i+1)
+			}
+		case strings.HasPrefix(line, "#EXT-X-TARGETDURATION:"):
+			if _, err := fmt.Sscanf(line, "#EXT-X-TARGETDURATION:%f", &m3u8.TargetDuration); err != nil {
+				return nil, err
+			}
+		case strings.HasPrefix(line, "#EXT-X-MEDIA-SEQUENCE:"):
+			if _, err := fmt.Sscanf(line, "#EXT-X-MEDIA-SEQUENCE:%d", &m3u8.MediaSequence); err != nil {
+				return nil, err
+			}
+		case strings.HasPrefix(line, "#EXT-X-VERSION:"):
+			if _, err := fmt.Sscanf(line, "#EXT-X-VERSION:%d", &m3u8.Version); err != nil {
+				return nil, err
+			}
+		// Parse master playlist
+		case strings.HasPrefix(line, "#EXT-X-STREAM-INF:"):
+			mp, err := parseMasterPlaylist(line)
+			if err != nil {
+				return nil, err
+			}
+			i++
+			mp.URI = lines[i]
+			if mp.URI == "" || strings.HasPrefix(mp.URI, "#") {
+				return nil, fmt.Errorf("invalid EXT-X-STREAM-INF URI, line: %d", i+1)
+			}
+			m3u8.MasterPlaylist = append(m3u8.MasterPlaylist, mp)
+			continue
+		case strings.HasPrefix(line, "#EXTINF:"):
+			if extInf {
+				return nil, fmt.Errorf("duplicate EXTINF: %s, line: %d", line, i+1)
+			}
+			if seg == nil {
+				seg = new(Segment)
+			}
+			var s string
+			if _, err := fmt.Sscanf(line, "#EXTINF:%s", &s); err != nil {
+				return nil, err
+			}
+			if strings.Contains(s, ",") {
+				split := strings.Split(s, ",")
+				seg.Title = split[1]
+				s = split[0]
+			}
+			df, err := strconv.ParseFloat(s, 32)
+			if err != nil {
+				return nil, err
+			}
+			seg.Duration = float32(df)
+			seg.KeyIndex = keyIndex
+			extInf = true
+		case strings.HasPrefix(line, "#EXT-X-BYTERANGE:"):
+			if extByte {
+				return nil, fmt.Errorf("duplicate EXT-X-BYTERANGE: %s, line: %d", line, i+1)
+			}
+			if seg == nil {
+				seg = new(Segment)
+			}
+			var b string
+			if _, err := fmt.Sscanf(line, "#EXT-X-BYTERANGE:%s", &b); err != nil {
+				return nil, err
+			}
+			if b == "" {
+				return nil, fmt.Errorf("invalid EXT-X-BYTERANGE, line: %d", i+1)
+			}
+			if strings.Contains(b, "@") {
+				split := strings.Split(b, "@")
+				offset, err := strconv.ParseUint(split[1], 10, 64)
+				if err != nil {
+					return nil, err
+				}
+				seg.Offset = uint64(offset)
+				b = split[0]
+			}
+			length, err := strconv.ParseUint(b, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			seg.Length = uint64(length)
+			extByte = true
+		// Parse segments URI
+		case !strings.HasPrefix(line, "#"):
+			if extInf {
+				if seg == nil {
+					return nil, fmt.Errorf("invalid line: %s", line)
+				}
+				seg.URI = line
+				extByte = false
+				extInf = false
+				m3u8.Segments = append(m3u8.Segments, seg)
+				seg = nil
+				continue
+			}
+		// Parse key
+		case strings.HasPrefix(line, "#EXT-X-KEY"):
+			params := parseLineParameters(line)
+			if len(params) == 0 {
+				return nil, fmt.Errorf("invalid EXT-X-KEY: %s, line: %d", line, i+1)
+			}
+			method := CryptMethod(params["METHOD"])
+			if method != "" && method != CryptMethodAES && method != CryptMethodNONE {
+				return nil, fmt.Errorf("invalid EXT-X-KEY method: %s, line: %d", method, i+1)
+			}
+			keyIndex++
+			key = new(Key)
+			key.Method = method
+			key.URI = params["URI"]
+			key.IV = params["IV"]
+			m3u8.Keys[keyIndex] = key
+		case line == "#EndList":
+			m3u8.EndList = true
+		default:
+			continue
 		}
-		aesLink, err := link.Parse(key.URI)
-		if err != nil {
-			return nil, err
-		}
-		resp, err := config.Client.Get(aesLink.String())
-		if resp != nil {
-			defer resp.Body.Close()
-		}
-		if err != nil {
-			return nil, err
-		}
-		b, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, err
-		}
-		table.CryptoVideoTable.Set(name, b)
-		break
 	}
 
-	return decode, nil
+	return m3u8, nil
 }
 
 const (
