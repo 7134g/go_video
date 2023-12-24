@@ -1,7 +1,7 @@
 package task_control
 
 import (
-	"dv/internel/serve/api/internal/model"
+	"dv/internel/serve/api/internal/util/model"
 	"encoding/json"
 	"errors"
 	"strconv"

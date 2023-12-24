@@ -5,7 +5,7 @@ import (
 	"crypto/tls"
 	"dv/internel/serve/api/internal/config"
 	"dv/internel/serve/api/internal/db"
-	"dv/internel/serve/api/internal/model"
+	"dv/internel/serve/api/internal/util/model"
 	"log"
 	"net/http"
 	"net/url"

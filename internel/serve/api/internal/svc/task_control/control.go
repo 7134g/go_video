@@ -2,8 +2,8 @@ package task_control
 
 import (
 	"context"
-	"dv/internel/serve/api/internal/model"
-	"dv/internel/serve/api/internal/table"
+	"dv/internel/serve/api/internal/util/model"
+	"dv/internel/serve/api/internal/util/table"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/threading"
 )

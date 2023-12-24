@@ -1,8 +1,8 @@
 package task_control
 
 import (
-	"dv/internel/serve/api/internal/model"
-	"dv/internel/serve/api/internal/svc/task_control/m3u8"
+	"dv/internel/serve/api/internal/util/m3u8"
+	"dv/internel/serve/api/internal/util/model"
 	"errors"
 	"fmt"
 	"github.com/jinzhu/copier"

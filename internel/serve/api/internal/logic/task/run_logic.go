@@ -2,9 +2,9 @@ package task
 
 import (
 	"context"
-	"dv/internel/serve/api/internal/model"
 	"dv/internel/serve/api/internal/svc"
 	"dv/internel/serve/api/internal/types"
+	"dv/internel/serve/api/internal/util/model"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )

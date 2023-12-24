@@ -2,9 +2,9 @@ package task_control
 
 import (
 	"bytes"
-	"dv/internel/serve/api/internal/aes"
-	"dv/internel/serve/api/internal/svc/task_control/m3u8"
-	"dv/internel/serve/api/internal/table"
+	"dv/internel/serve/api/internal/util/aes"
+	"dv/internel/serve/api/internal/util/m3u8"
+	"dv/internel/serve/api/internal/util/table"
 	"errors"
 	"fmt"
 	"io"

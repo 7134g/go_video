@@ -2,7 +2,7 @@ package task
 
 import (
 	"context"
-	"dv/internel/serve/api/internal/model"
+	"dv/internel/serve/api/internal/util/model"
 	"github.com/jinzhu/copier"
 
 	"dv/internel/serve/api/internal/svc"
