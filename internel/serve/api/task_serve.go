@@ -1,6 +1,7 @@
 package main
 
 import (
+	"dv/internel/serve/api/internal/svc/task_control"
 	"flag"
 	"fmt"
 
@@ -19,6 +20,8 @@ func main() {
 
 	var c config.Config
 	conf.MustLoad(*configFile, &c)
+
+	task_control.InitTaskConfig(c)
 
 	server := rest.MustNewServer(c.RestConf)
 	defer server.Stop()

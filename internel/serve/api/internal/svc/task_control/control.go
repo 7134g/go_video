@@ -20,19 +20,27 @@ func (c *TaskControl) Stop() {
 	defer c.mux.Unlock()
 
 	c.cancel()
-	c.reset()
+	close(c.vacancy)
+	c.vacancy = make(chan struct{}, len(c.vacancy))
+	c.running = false
 }
 
-func (c *TaskControl) reset() {
-	close(c.vacancy)
-	c.vacancy = make(chan struct{}, tcConfig.cfg.Concurrency)
-	c.running = false
+func (c *TaskControl) start() {
+	c.mux.Lock()
+	defer c.mux.Unlock()
+	c.running = true
+	c.ctx, c.cancel = context.WithCancel(context.Background())
+}
+
+func (c *TaskControl) incDoneCount() {
+	c.mux.Lock()
+	defer c.mux.Unlock()
+	c.doneCount++
 }
 
 func (c *TaskControl) Run(task []model.Task) {
 	defer c.Stop()
-	c.running = true
-	c.ctx, c.cancel = context.WithCancel(context.Background())
+	c.start()
 
 	for _, m := range task {
 		w := newWork(m)
@@ -62,7 +70,7 @@ func (c *TaskControl) Submit(fn func() error, d *download) {
 
 		if err := fn(); err != nil {
 			table.IncErrCount(d.key)
-			if table.GetErrCount(d.key) >= tcConfig.cfg.TaskErrorMaxCount {
+			if table.GetErrCount(d.key) >= tcConfig.TaskErrorMaxCount {
 				logx.Error(saveErrorCellData(d))
 				return
 			} else {
@@ -71,6 +79,7 @@ func (c *TaskControl) Submit(fn func() error, d *download) {
 			}
 		}
 
+		c.incDoneCount()
 		logx.Info(d.key, "is done")
 
 		return

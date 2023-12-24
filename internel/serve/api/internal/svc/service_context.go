@@ -27,6 +27,6 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		AuthInterceptor: middleware.NewAuthInterceptorMiddleware().Handle,
 		TaskModel:       model.NewTaskModel(db.GetDB()),
 		ErrorModel:      model.NewErrorModel(db.GetDB()),
-		TaskControl:     task_control.NewTaskControl(c),
+		TaskControl:     task_control.NewTaskControl(c.TaskControlConfig.Concurrency),
 	}
 }
