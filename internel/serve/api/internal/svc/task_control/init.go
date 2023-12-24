@@ -22,9 +22,9 @@ type TaskControl struct {
 	mux       sync.Mutex
 	ctx       context.Context
 	cancel    context.CancelFunc
-	doneCount uint
+	doneCount uint // 完成数
 
-	running bool          // 是否正常运行
+	running bool          // 是否正在运行
 	vacancy chan struct{} // 并发控制
 }
 
@@ -44,19 +44,16 @@ func NewTaskControl(concurrency uint) *TaskControl {
 		running: false,
 		vacancy: make(chan struct{}, concurrency),
 	}
-
-	errModel = model.NewErrorModel(db.GetDB())
-
 	return core
 }
 
 func InitTaskConfig(c config.Config) {
+	errModel = model.NewErrorModel(db.GetDB())
 	tcConfig = &taskControlConfig{
 		Client:            &http.Client{Transport: getHttpProxy(c.HttpConfig)},
 		Headers:           getHeader(c.HttpConfig),
 		TaskControlConfig: c.TaskControlConfig,
 	}
-
 }
 
 func getHttpProxy(c config.HttpConfig) http.RoundTripper {

@@ -49,12 +49,11 @@ func (w work) parseTask() (*download, particleFunc) {
 		return nil, fail(errors.New("type error"))
 	}
 
-	d := &download{
-		key:      buildKey(w.task.ID, w.task.Name),
-		fileDir:  tcConfig.SaveDir,
-		fileName: w.task.Name,
-		fileSize: 0,
-	}
+	d := newDownload(
+		buildKey(w.task.ID, w.task.Name),
+		tcConfig.SaveDir,
+		w.task.Name,
+	)
 	switch w.task.VideoType {
 	case model.VideoTypeMp4:
 		return d, w.getVideo(d, _url, header)
@@ -116,11 +115,12 @@ func (w work) getM3u8(d *download, _url string, header http.Header) func() error
 	core.start()
 	for index, segment := range segments {
 		fileName := fmt.Sprintf("%s_%d", w.task.Name, index)
-		d := &download{
-			key:      buildKey(w.task.ID, fileName),
-			fileDir:  dir,
-			fileName: fileName,
-		}
+
+		d := newDownload(
+			buildKey(w.task.ID, fileName),
+			dir,
+			fileName,
+		)
 		link, err := url.Parse(_url)
 		if err != nil {
 			return fail(err)
