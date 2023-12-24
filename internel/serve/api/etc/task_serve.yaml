@@ -11,7 +11,7 @@ Log:
   TimeFormat: 2006-01-02 15:04:05
 
 # 数据库
-DB: data.db
+DB: data.sqlite
 
 # 下载任务并发数
 Concurrency: 5

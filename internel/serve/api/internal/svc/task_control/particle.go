@@ -2,7 +2,7 @@ package task_control
 
 import (
 	"bytes"
-	"dv/base"
+	"dv/internel/serve/api/internal/aes"
 	"dv/internel/serve/api/internal/svc/task_control/m3u8"
 	"dv/internel/serve/api/internal/table"
 	"errors"
@@ -129,7 +129,7 @@ func (d *download) rw(read io.Reader, write io.Writer) error {
 
 func (d *download) decode(data []byte) []byte {
 	if key, ok := table.CryptoVideoTable.Get(d.key); ok {
-		return base.AESDecrypt(data, key)
+		return aes.AESDecrypt(data, key)
 	}
 
 	return data
