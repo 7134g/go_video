@@ -8,6 +8,6 @@ do
     fi
 done
 
-go build -o ./build/serve ./internel/serve/api/task_serve.go
-go build -o ./build/dv ./internel/serve/api/tool/main.go
+go build -o ./build/serve.exe ./internel/serve/api/task_serve.go
+go build -o ./build/dv.exe ./internel/serve/api/tool/main.go
 cp ./internel/serve/api/etc/task_serve.yaml ./build/etc/task_serve.yaml

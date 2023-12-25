@@ -9,6 +9,7 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/threading"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -53,12 +54,11 @@ func (c *TaskControl) printDownloadProgress(taskTotal uint) {
 			return
 		case <-ticker.C:
 			nowDownloadDataLen, exist := table.M3u8DownloadSpeed.Get(c.Name)
-			ndd := uint(nowDownloadDataLen)
-			if !exist || ndd == 0 {
+			if !exist || nowDownloadDataLen == 0 {
 				continue
 			}
 
-			downloadTimeSince := ndd - lastDownloadTimeSince
+			downloadTimeSince := nowDownloadDataLen - lastDownloadTimeSince
 			speed, unit := calc.UnitReturn(float64(downloadTimeSince))
 			log.Println(fmt.Sprintf("%s 下载进度(%d/%d) 速度：%.2f %s/s 完成度：%.2f ",
 				c.Name,
@@ -66,7 +66,7 @@ func (c *TaskControl) printDownloadProgress(taskTotal uint) {
 				speed, unit,
 				float64(c.doneCount)/float64(taskTotal)*100,
 			) + "%")
-			lastDownloadTimeSince = ndd
+			lastDownloadTimeSince = nowDownloadDataLen
 		}
 	}
 }
@@ -97,7 +97,9 @@ func (c *TaskControl) submit(fn func() error, d *download) {
 		}
 
 		c.incDoneCount()
-		logx.Info(d.key, "is done")
+		if len(strings.Split(d.key, "_")) <= 2 {
+			logx.Info(d.key, " is done")
+		}
 
 		return
 	})

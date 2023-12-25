@@ -16,7 +16,7 @@ func InitSqlite(fp string) {
 	var err error
 	db, err = gorm.Open(sqlite.Open(fp), &gorm.Config{
 		PrepareStmt: true,
-		Logger:      logger.Default.LogMode(logger.Info),
+		Logger:      logger.Default.LogMode(logger.Silent),
 		NamingStrategy: schema.NamingStrategy{
 			SingularTable: true,
 		},

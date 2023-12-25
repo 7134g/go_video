@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -27,6 +28,7 @@ type download struct {
 }
 
 func newDownload(key, fileDir, fileName string) *download {
+	_ = os.MkdirAll(fileDir, 0700)
 	return &download{
 		key:      key,
 		fileDir:  fileDir,
@@ -35,8 +37,15 @@ func newDownload(key, fileDir, fileName string) *download {
 	}
 }
 
-func buildKey(id uint, name string) string {
-	return fmt.Sprintf("%d_%s", id, name)
+func buildKey(id uint, name string, childFlag ...string) string {
+	key := fmt.Sprintf("%d_%s", id, name)
+	if len(childFlag) > 0 {
+		for _, child := range childFlag {
+			key = fmt.Sprintf("%s_%s", key, child)
+		}
+	}
+
+	return key
 }
 
 func (d *download) getM3u8File(client *http.Client, _url string, header http.Header) ([]*m3u8.Segment, error) {
@@ -160,6 +169,9 @@ func (d *download) rw(read io.Reader, write io.Writer) error {
 }
 
 func (d *download) printDownloadMessage() {
+	if len(strings.Split(d.key, "_")) > 2 {
+		return
+	}
 	var now = time.Now()                                         // 记录耗时
 	var fileSize = float64(d.totalFileSize) / 1024 / 1024 / 1024 // gb
 	var lastNowRS float64                                        // 上一次打印消息的已读数据长度
@@ -170,7 +182,7 @@ func (d *download) printDownloadMessage() {
 		select {
 		case <-ticker.C:
 			nowRS := float64(d.fileSize)
-			score := nowRS / fileSize * 100
+			score := nowRS / float64(d.totalFileSize) * 100
 			dataByTime := (nowRS - lastNowRS) / float64(3) // 间隔时间内下载的数据, byte
 			speed, unit := calc.UnitReturn(dataByTime)
 			msg = fmt.Sprintf("百分比 %.2f 速度 %.3f %s/s | %.3f GB", score, speed, unit, fileSize)

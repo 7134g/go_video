@@ -9,6 +9,8 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"sync"
 )
 
@@ -51,6 +53,16 @@ func NewTaskControl(concurrency uint) *TaskControl {
 }
 
 func InitTaskConfig(c config.Config) {
+	dir, err := filepath.Abs(c.SaveDir)
+	if err != nil {
+		panic(err)
+	}
+	_ = os.MkdirAll(dir, 0700)
+
+	if _, err := os.Stat(c.FfmpegPath); err != nil {
+		c.UseFfmpeg = false
+	}
+
 	errModel = model.NewErrorModel(db.GetDB())
 	tcConfig = &taskControlConfig{
 		Client:            &http.Client{Transport: getHttpProxy(c.HttpConfig)},

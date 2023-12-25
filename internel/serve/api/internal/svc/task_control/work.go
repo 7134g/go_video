@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -60,8 +61,10 @@ func (w work) parseTask() (*download, particleFunc) {
 	)
 	switch w.task.VideoType {
 	case model.VideoTypeMp4:
+		d.fileName = fmt.Sprintf("%s.mp4", d.fileName)
 		return d, w.getVideo(d, _url, header)
 	case model.VideoTypeM3u8:
+		d.key = buildKey(w.task.ID, w.task.Name, "m3u8")
 		return d, w.getM3u8(d, _url, header)
 	default:
 		return nil, fail(errors.New("video type error"))
@@ -70,7 +73,7 @@ func (w work) parseTask() (*download, particleFunc) {
 }
 
 func (w work) getVideo(d *download, _url string, header http.Header) func() error {
-	savePath := filepath.Join(tcConfig.SaveDir, d.fileName)
+	savePath := filepath.Join(d.fileDir, d.fileName)
 	file, err := os.OpenFile(savePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, os.ModePerm)
 	if err != nil {
 		return fail(err)
@@ -119,12 +122,6 @@ func (w work) getM3u8(d *download, _url string, header http.Header) func() error
 	core.start()
 	go core.printDownloadProgress(uint(len(segments)))
 	for index, segment := range segments {
-		fileName := fmt.Sprintf("%s_%d", w.task.Name, index)
-		dChild := newDownload(
-			buildKey(w.task.ID, fileName),
-			dir,
-			fileName,
-		)
 		link, err := url.Parse(_url)
 		if err != nil {
 			return fail(err)
@@ -134,7 +131,18 @@ func (w work) getM3u8(d *download, _url string, header http.Header) func() error
 			return fail(err)
 		}
 
-		if crypto, exist := table.CryptoVideoTable.Get(dChild.key); exist {
+		fileName := fmt.Sprintf("%s_%d", w.task.Name, index)
+		pathPart := strings.Split(link.Path, ".")
+		if len(pathPart) > 0 {
+			fileName = fmt.Sprintf("%s.%s", fileName, pathPart[len(pathPart)-1])
+		}
+		dChild := newDownload(
+			buildKey(w.task.ID, fileName, "m3u8"),
+			dir,
+			fileName,
+		)
+
+		if crypto, exist := table.CryptoVideoTable.Get(d.key); exist {
 			core.submit(func() error {
 				buf := bytes.NewBuffer(nil)
 				if err := dChild.get(tcConfig.Client, _url, header, buf); err != nil {
@@ -157,7 +165,7 @@ func (w work) getM3u8(d *download, _url string, header http.Header) func() error
 				return err
 			}, dChild)
 		} else {
-			core.submit(w.getVideo(dChild, _url, header), dChild)
+			core.submit(w.getVideo(dChild, link.String(), header), dChild)
 		}
 
 	}
@@ -174,7 +182,7 @@ func (w work) getM3u8(d *download, _url string, header http.Header) func() error
 		}
 	}
 
-	_ = os.RemoveAll(dir) // 删除文件夹
+	//_ = os.RemoveAll(dir) // 删除文件夹
 
 	logx.Infof("%s ===================> 任务完成,耗时 %s\n", w.task.Name, time.Since(beginTime))
 	return nil

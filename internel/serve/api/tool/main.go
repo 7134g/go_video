@@ -26,30 +26,33 @@ func main() {
 
 	var c config.Config
 	conf.MustLoad(*configFile, &c)
+	if err := c.SetUp(); err != nil {
+		logx.Error(err)
+		return
+	}
 	db.InitSqlite(c.DB)
 	taskDB := model.NewTaskModel(db.GetDB())
-	if err := parseTaskList(taskDB); err != nil {
+	taskList, err := parseTaskList(taskDB)
+	if err != nil {
 		logx.Error(err)
+		return
 	}
 
 	task_control.InitTaskConfig(c)
 	core := task_control.NewTaskControl(c.TaskControlConfig.Concurrency)
-	taskList, err := taskDB.List()
-	if err != nil {
-		logx.Error(err)
-	}
 	core.Run(taskList)
 }
 
-func parseTaskList(taskDB *model.TaskModel) error {
+func parseTaskList(taskDB *model.TaskModel) ([]model.Task, error) {
+	taskList := make([]model.Task, 0)
 	bs, err := os.ReadFile(*taskFile)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	content := string(bs)
 	if content == "" {
-		return errors.New("content is 0")
+		return nil, errors.New("content is 0")
 	}
 	reHead, _ := regexp.Compile(`\s+`)
 	content = reHead.ReplaceAllString(content, "\n")
@@ -68,7 +71,7 @@ func parseTaskList(taskDB *model.TaskModel) error {
 		}
 		u, err := url.Parse(value)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		index := strings.LastIndex(u.Path, ".")
 		ext := u.Path[index+1:]
@@ -76,20 +79,22 @@ func parseTaskList(taskDB *model.TaskModel) error {
 		case model.VideoTypeMp4:
 		case model.VideoTypeM3u8:
 		default:
-			return errors.New("ext error")
+			return nil, errors.New("ext error")
 		}
 
-		if err := taskDB.Insert(&model.Task{
+		t := model.Task{
 			Name:      key,
 			VideoType: ext,
 			Type:      "url", // todo curl
 			Data:      value,
-		}); err != nil {
-			return err
 		}
+		if err := taskDB.Insert(&t); err != nil {
+			return nil, err
+		}
+		taskList = append(taskList, t)
 
 		i++
 	}
 
-	return nil
+	return taskList, nil
 }

@@ -182,20 +182,6 @@ func CalculationTime(d float32) string {
 	return fmt.Sprintf("%d h %d m %d s", h, m, s)
 }
 
-// 获取目录下的文件列表
-func getFilesInDir(dirname string) ([]string, error) {
-	var files []string
-
-	err := filepath.Walk(dirname, func(path string, info os.FileInfo, err error) error {
-		if !info.IsDir() {
-			files = append(files, info.Name())
-		}
-		return nil
-	})
-
-	return files, err
-}
-
 func MergeFiles(name, saveDir string) error {
 	outputFilepath := filepath.Join(saveDir, "../", name+".mp4")
 	outputFile, err := os.Create(outputFilepath)
@@ -204,14 +190,12 @@ func MergeFiles(name, saveDir string) error {
 	}
 	defer outputFile.Close()
 
-	files, err := getFilesInDir(saveDir)
-	if err != nil {
-		return err
-	}
+	err = filepath.Walk(saveDir, func(path string, info os.FileInfo, err error) error {
+		if info.IsDir() {
+			return nil
+		}
 
-	for _, file := range files {
-		inputFilepath := filepath.Join(saveDir, file)
-		inputFile, err := os.Open(inputFilepath)
+		inputFile, err := os.Open(path)
 		if err != nil {
 			return err
 		}
@@ -220,7 +204,8 @@ func MergeFiles(name, saveDir string) error {
 		if _, err := io.Copy(outputFile, inputFile); err != nil {
 			return err
 		}
-	}
+		return nil
+	})
 
-	return nil
+	return err
 }
