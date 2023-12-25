@@ -9,6 +9,7 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/threading"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -85,9 +86,13 @@ func (c *TaskControl) submit(fn func() error, d *download) {
 			<-c.vacancy
 		}()
 
+		keyPart := strings.Split(d.key, "_")
+		taskId, _ := strconv.Atoi(keyPart[0])
+
 		if err := fn(); err != nil {
 			table.IncErrCount(d.key)
 			if table.GetErrCount(d.key) >= tcConfig.TaskErrorMaxCount {
+				_ = tasKModel.UpdateStatus(uint(taskId), model.StatusError)
 				logx.Error(saveErrorCellData(d))
 				return
 			} else {
@@ -97,7 +102,8 @@ func (c *TaskControl) submit(fn func() error, d *download) {
 		}
 
 		c.incDoneCount()
-		if len(strings.Split(d.key, "_")) <= 2 {
+		if len(keyPart) <= 2 {
+			_ = tasKModel.UpdateStatus(uint(taskId), model.StatusSuccess)
 			logx.Info(d.key, " is done")
 		}
 
@@ -118,7 +124,9 @@ func (c *TaskControl) Run(task []model.Task) {
 			continue
 		}
 
+		_ = tasKModel.UpdateStatus(m.ID, model.StatusRunning)
 		c.submit(particle, d)
 	}
 	c.wg.Wait()
+
 }

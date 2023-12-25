@@ -30,7 +30,7 @@ func (l *RunLogic) Run(req *types.TaskRunRequest) (resp *types.TaskRunResponse, 
 	}
 
 	task := make([]model.Task, 0)
-	l.svcCtx.TaskModel.DB.Where("status != ?", model.StatsuSuccess).Find(&task)
+	l.svcCtx.TaskModel.DB.Where("status != ?", model.StatusSuccess).Find(&task)
 
 	if l.svcCtx.TaskControl.GetStatus() {
 		return &types.TaskRunResponse{Message: "正在执行中"}, err

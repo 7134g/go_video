@@ -25,10 +25,10 @@ const (
 type statusEnum uint
 
 const (
-	StatsuWait statusEnum = iota
-	StatsuRunning
-	StatsuError
-	StatsuSuccess
+	StatusWait statusEnum = iota
+	StatusRunning
+	StatusError
+	StatusSuccess
 )
 
 type TaskModel struct {
@@ -52,12 +52,12 @@ func (m *TaskModel) Update(task *Task) error {
 	return m.DB.Model(&Task{}).Where("id = ?", task.ID).Updates(task).Error
 }
 
-func (m *TaskModel) UpdateStatus(id, status uint) error {
-	switch statusEnum(status) {
-	case StatsuWait:
-	case StatsuRunning:
-	case StatsuError:
-	case StatsuSuccess:
+func (m *TaskModel) UpdateStatus(id uint, status statusEnum) error {
+	switch status {
+	case StatusWait:
+	case StatusRunning:
+	case StatusError:
+	case StatusSuccess:
 	default:
 		return errors.New("status error")
 	}

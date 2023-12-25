@@ -15,8 +15,9 @@ import (
 )
 
 var (
-	tcConfig *taskControlConfig
-	errModel *model.ErrorModel
+	tcConfig  *taskControlConfig
+	errModel  *model.ErrorModel
+	tasKModel *model.TaskModel
 )
 
 type TaskControl struct {
