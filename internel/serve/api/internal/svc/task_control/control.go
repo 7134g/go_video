@@ -53,7 +53,7 @@ func (c *TaskControl) printDownloadProgress(taskTotal uint) {
 		case <-c.printStop:
 			return
 		case <-ticker.C:
-			nowDownloadDataLen, exist := table.M3u8DownloadSpeed.Get(c.Name)
+			nowDownloadDataLen, exist := table.M3u8DownloadDataLen.Get(c.Name)
 			if !exist || nowDownloadDataLen == 0 {
 				continue
 			}

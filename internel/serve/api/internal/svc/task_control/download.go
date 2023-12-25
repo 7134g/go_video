@@ -54,7 +54,7 @@ func (d *download) getM3u8File(client *http.Client, _url string, header http.Hea
 	if err := d.get(client, _url, header, buf); err != nil {
 		return nil, err
 	}
-
+	logx.Debug(buf.String())
 	m3u8Data, err := m3u8.ParseM3u8Data(buf)
 	if err != nil {
 		return nil, err
@@ -103,7 +103,9 @@ func (d *download) getM3u8File(client *http.Client, _url string, header http.Hea
 }
 
 func (d *download) get(client *http.Client, _url string, header http.Header, write io.Writer) error {
+	d.stop = make(chan struct{})
 	// 构建请求
+	logx.Debug(_url)
 	req, err := http.NewRequest(http.MethodGet, _url, nil)
 	if err != nil {
 		return err

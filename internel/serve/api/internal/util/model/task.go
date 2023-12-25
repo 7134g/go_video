@@ -65,8 +65,29 @@ func (m *TaskModel) UpdateStatus(id, status uint) error {
 	return m.DB.Model(&Task{}).Where("id = ?", id).Update("status= ?", status).Error
 }
 
+func (m *TaskModel) Exist(data string) (*Task, error) {
+	findTask := &Task{}
+	if err := m.DB.Model(&Task{}).Where("data = ?", data).First(findTask).Error; err != nil {
+		return nil, err
+	}
+
+	return findTask, nil
+}
+
 func (m *TaskModel) Insert(task *Task) error {
-	return m.DB.Model(&Task{}).Create(task).Error
+	findTask := Task{}
+	err := m.DB.Model(&Task{}).Where("data = ?", task.Data).First(&findTask).Error
+	switch err {
+	case gorm.ErrRecordNotFound:
+		return m.DB.Model(&Task{}).Create(task).Error
+	case nil:
+		*task = findTask
+		return nil
+	default:
+		return err
+	}
+
+	//return m.DB.Model(&Task{}).Create(task).Error
 }
 
 func (m *TaskModel) Delete(id uint) error {

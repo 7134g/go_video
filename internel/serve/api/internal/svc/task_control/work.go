@@ -74,7 +74,12 @@ func (w work) parseTask() (*download, particleFunc) {
 
 func (w work) getVideo(d *download, _url string, header http.Header) func() error {
 	savePath := filepath.Join(d.fileDir, d.fileName)
-	file, err := os.OpenFile(savePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, os.ModePerm)
+	var flag = os.O_RDWR | os.O_CREATE | os.O_APPEND
+	if len(strings.Split(d.key, "_")) > 2 {
+		flag = os.O_RDWR | os.O_CREATE | os.O_TRUNC
+	}
+
+	file, err := os.OpenFile(savePath, flag, os.ModePerm)
 	if err != nil {
 		return fail(err)
 	}
@@ -110,7 +115,7 @@ func (w work) getM3u8(d *download, _url string, header http.Header) func() error
 	for _, segment := range segments {
 		playbackDuration += segment.Duration
 	}
-	logx.Infof("该电影时长 %s \n", m3u8.CalculationTime(playbackDuration))
+	logx.Infof("%s 该电影时长 %s \n", w.task.Name, m3u8.CalculationTime(playbackDuration))
 
 	concurrency := tcConfig.ConcurrencyM3u8
 	if uint(len(segments))/(concurrency*concurrency) > concurrency {
@@ -148,7 +153,7 @@ func (w work) getM3u8(d *download, _url string, header http.Header) func() error
 				if err := dChild.get(tcConfig.Client, _url, header, buf); err != nil {
 					return err
 				}
-				table.M3u8DownloadSpeed.Set(d.key, uint(buf.Len()))
+				table.M3u8DownloadDataLen.Set(d.key, uint(buf.Len()))
 
 				data := aes.AESDecrypt(buf.Bytes(), crypto)
 				if data == nil {
@@ -177,7 +182,7 @@ func (w work) getM3u8(d *download, _url string, header http.Header) func() error
 			return fail(err)
 		}
 	} else {
-		if err := m3u8.MergeFiles(w.task.Name, dir); err != nil {
+		if err := m3u8.MergeFiles(dir); err != nil {
 			return fail(err)
 		}
 	}

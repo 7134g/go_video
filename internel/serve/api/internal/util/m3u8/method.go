@@ -2,6 +2,7 @@ package m3u8
 
 import (
 	"bufio"
+	"dv/internel/serve/api/internal/util/table"
 	"fmt"
 	"io"
 	"os"
@@ -182,18 +183,22 @@ func CalculationTime(d float32) string {
 	return fmt.Sprintf("%d h %d m %d s", h, m, s)
 }
 
-func MergeFiles(name, saveDir string) error {
-	outputFilepath := filepath.Join(saveDir, "../", name+".mp4")
+func MergeFiles(saveDir string) error {
+	path, dirName := filepath.Split(saveDir)
+	outputFilepath := filepath.Join(path, dirName+".mp4")
 	outputFile, err := os.Create(outputFilepath)
 	if err != nil {
 		return err
 	}
 	defer outputFile.Close()
 
+	var size int64 = 0
 	err = filepath.Walk(saveDir, func(path string, info os.FileInfo, err error) error {
 		if info.IsDir() {
 			return nil
 		}
+
+		size += info.Size()
 
 		inputFile, err := os.Open(path)
 		if err != nil {
@@ -206,6 +211,9 @@ func MergeFiles(name, saveDir string) error {
 		}
 		return nil
 	})
+
+	fileSize, _ := table.M3u8DownloadDataLen.Get(dirName)
+	fmt.Println(size, fileSize)
 
 	return err
 }

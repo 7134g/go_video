@@ -5,7 +5,7 @@ Port: 8888
 Log:
   Mode: console
   Encoding: plain
-  Level: debug
+  Level: info
   Path: ./log
   Stat: false
   TimeFormat: 2006-01-02 15:04:05
@@ -34,4 +34,4 @@ Headers:
 
 # 代理地址
 Proxy: http://127.0.0.1:7890
-ProxyStatus: true
+ProxyStatus: false
