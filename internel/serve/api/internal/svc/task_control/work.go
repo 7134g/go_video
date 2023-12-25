@@ -140,7 +140,7 @@ func (w work) getM3u8(d *download, _url string, header http.Header) func() error
 				if err := dChild.get(tcConfig.Client, _url, header, buf); err != nil {
 					return err
 				}
-				table.M3u8DownloadSpeed.SetUint(d.key, uint(buf.Len()))
+				table.M3u8DownloadSpeed.Set(d.key, uint(buf.Len()))
 
 				data := aes.AESDecrypt(buf.Bytes(), crypto)
 				if data == nil {
