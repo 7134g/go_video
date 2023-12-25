@@ -18,14 +18,17 @@ var (
 )
 
 type TaskControl struct {
+	Name string // 任务名
+
 	wg        sync.WaitGroup
 	mux       sync.Mutex
 	ctx       context.Context
 	cancel    context.CancelFunc
 	doneCount uint // 完成数
 
-	running bool          // 是否正在运行
-	vacancy chan struct{} // 并发控制
+	running   bool          // 是否正在运行
+	vacancy   chan struct{} // 并发控制
+	printStop chan struct{} // 打印进度
 }
 
 type taskControlConfig struct {

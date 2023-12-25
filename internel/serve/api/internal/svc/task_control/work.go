@@ -1,12 +1,16 @@
 package task_control
 
 import (
+	"bytes"
+	"dv/internel/serve/api/internal/util/aes"
 	"dv/internel/serve/api/internal/util/m3u8"
 	"dv/internel/serve/api/internal/util/model"
+	"dv/internel/serve/api/internal/util/table"
 	"errors"
 	"fmt"
 	"github.com/jinzhu/copier"
 	"github.com/zeromicro/go-zero/core/logx"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -113,10 +117,10 @@ func (w work) getM3u8(d *download, _url string, header http.Header) func() error
 	dir := filepath.Join(tcConfig.SaveDir, w.task.Name)
 	core := NewTaskControl(concurrency)
 	core.start()
+	go core.printDownloadProgress(uint(len(segments)))
 	for index, segment := range segments {
 		fileName := fmt.Sprintf("%s_%d", w.task.Name, index)
-
-		d := newDownload(
+		dChild := newDownload(
 			buildKey(w.task.ID, fileName),
 			dir,
 			fileName,
@@ -130,7 +134,32 @@ func (w work) getM3u8(d *download, _url string, header http.Header) func() error
 			return fail(err)
 		}
 
-		core.Submit(w.getVideo(d, _url, header), d)
+		if crypto, exist := table.CryptoVideoTable.Get(dChild.key); exist {
+			core.submit(func() error {
+				buf := bytes.NewBuffer(nil)
+				if err := dChild.get(tcConfig.Client, _url, header, buf); err != nil {
+					return err
+				}
+				table.M3u8DownloadSpeed.SetUint(d.key, uint(buf.Len()))
+
+				data := aes.AESDecrypt(buf.Bytes(), crypto)
+				if data == nil {
+					return errors.New("视频格式解析失败")
+				}
+				savePath := filepath.Join(dir, dChild.fileName)
+				f, err := os.Create(savePath)
+				if err != nil {
+					return err
+				}
+
+				_, err = io.Copy(f, buf)
+
+				return err
+			}, dChild)
+		} else {
+			core.submit(w.getVideo(dChild, _url, header), dChild)
+		}
+
 	}
 	core.wg.Wait()
 

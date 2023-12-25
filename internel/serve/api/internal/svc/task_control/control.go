@@ -2,10 +2,14 @@ package task_control
 
 import (
 	"context"
+	"dv/internel/serve/api/internal/util/calc"
 	"dv/internel/serve/api/internal/util/model"
 	"dv/internel/serve/api/internal/util/table"
+	"fmt"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/threading"
+	"log"
+	"time"
 )
 
 func (c *TaskControl) GetStatus() bool {
@@ -20,6 +24,7 @@ func (c *TaskControl) Stop() {
 	defer c.mux.Unlock()
 
 	c.cancel()
+	close(c.printStop)
 	close(c.vacancy)
 	c.vacancy = make(chan struct{}, len(c.vacancy))
 	c.running = false
@@ -30,6 +35,7 @@ func (c *TaskControl) start() {
 	defer c.mux.Unlock()
 	c.running = true
 	c.ctx, c.cancel = context.WithCancel(context.Background())
+	c.printStop = make(chan struct{})
 }
 
 func (c *TaskControl) incDoneCount() {
@@ -38,23 +44,34 @@ func (c *TaskControl) incDoneCount() {
 	c.doneCount++
 }
 
-func (c *TaskControl) Run(task []model.Task) {
-	defer c.Stop()
-	c.start()
+func (c *TaskControl) printDownloadProgress(taskTotal uint) {
+	ticker := time.NewTicker(time.Second * 3)
+	var lastDownloadTimeSince uint
+	for {
+		select {
+		case <-c.printStop:
+			return
+		case <-ticker.C:
+			nowDownloadDataLen, exist := table.M3u8DownloadSpeed.Get(c.Name)
+			ndd := uint(nowDownloadDataLen)
+			if !exist || ndd == 0 {
+				continue
+			}
 
-	for _, m := range task {
-		w := newWork(m)
-		d, particle := w.parseTask()
-		if particle == nil {
-			continue
+			downloadTimeSince := ndd - lastDownloadTimeSince
+			speed, unit := calc.UnitReturn(float64(downloadTimeSince))
+			log.Println(fmt.Sprintf("%s 下载进度(%d/%d) 速度：%.2f %s/s 完成度：%.2f ",
+				c.Name,
+				c.doneCount, taskTotal,
+				speed, unit,
+				float64(c.doneCount)/float64(taskTotal)*100,
+			) + "%")
+			lastDownloadTimeSince = ndd
 		}
-
-		c.Submit(particle, d)
 	}
-	c.wg.Wait()
 }
 
-func (c *TaskControl) Submit(fn func() error, d *download) {
+func (c *TaskControl) submit(fn func() error, d *download) {
 	c.wg.Add(1)
 	select {
 	case c.vacancy <- struct{}{}:
@@ -75,7 +92,7 @@ func (c *TaskControl) Submit(fn func() error, d *download) {
 				return
 			} else {
 				logx.Error(d.key, err)
-				c.Submit(fn, d)
+				c.submit(fn, d)
 			}
 		}
 
@@ -84,4 +101,22 @@ func (c *TaskControl) Submit(fn func() error, d *download) {
 
 		return
 	})
+}
+
+func (c *TaskControl) Run(task []model.Task) {
+	defer c.Stop()
+	c.start()
+
+	go c.printDownloadProgress(uint(len(task)))
+
+	for _, m := range task {
+		w := newWork(m)
+		d, particle := w.parseTask()
+		if particle == nil {
+			continue
+		}
+
+		c.submit(particle, d)
+	}
+	c.wg.Wait()
 }
