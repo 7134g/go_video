@@ -19,6 +19,7 @@ import (
 var (
 	configFile = flag.String("f", "etc/task_serve.yaml", "the config file")
 	taskFile   = flag.String("t", "url.txt", "默认：url.txt文件")
+	curlFlag   = flag.Bool("t", false, "curl 格式")
 )
 
 func main() {
@@ -54,6 +55,27 @@ func parseTaskList(taskDB *model.TaskModel) ([]model.Task, error) {
 	if content == "" {
 		return nil, errors.New("content is 0")
 	}
+
+	if *curlFlag {
+		// todo 分割curl
+		//reg, err := regexp.Compile("(?s)curl (.*?)compressed")
+		//reg, err := regexp.Compile("(?s)(.*?)compressed\n+")
+
+		var key string
+		t := model.Task{
+			Name: key,
+			Type: model.TypeCurl,
+			Data: content,
+		}
+
+		if err := taskDB.Insert(&t); err != nil {
+			return nil, err
+		}
+		taskList = append(taskList, t)
+
+		return taskList, err
+	}
+
 	reHead, _ := regexp.Compile(`\s+`)
 	content = reHead.ReplaceAllString(content, "\n")
 	content = strings.TrimPrefix(content, "\n")
@@ -85,9 +107,10 @@ func parseTaskList(taskDB *model.TaskModel) ([]model.Task, error) {
 		t := model.Task{
 			Name:      key,
 			VideoType: ext,
-			Type:      "url", // todo curl
+			Type:      model.TypeUrl,
 			Data:      value,
 		}
+
 		if err := taskDB.Insert(&t); err != nil {
 			return nil, err
 		}
