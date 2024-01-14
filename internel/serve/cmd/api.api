@@ -1,5 +1,7 @@
 syntax = "v1"
 
+import "query.api"
+
 info(
 	title: "type title here"
 	desc: "type desc here"
@@ -18,7 +20,7 @@ service task_serve {
 	post /create (TaskCreateRequest) returns (TaskCreateResponse)
 
 	@handler List
-	get /list (TaskListRequest) returns (TaskListResponse)
+	post /list (TaskListRequest) returns (TaskListResponse)
 
 	@handler Update
 	post /update (TaskUpdateRequest) returns (TaskUpdateResponse)
@@ -46,7 +48,7 @@ type (
 	TaskCreateRequest {
 		Name      string `json:"name"`                          // 任务名字
 		VideoType string `json:"video_type,options=[mp4,m3u8]"` // 视频类型
-		Type      string `json:"type,options=[url,curl]"`       // 任务类型
+		Type      string `json:"type,options=[url,curl,all]"`   // 任务类型
 		Data      string `json:"data"`                          // url 或者 curl
 	}
 	TaskCreateResponse {
@@ -55,10 +57,10 @@ type (
 
 type (
 	TaskListRequest {
+		DbQueryList
 	}
 	TaskListResponse {
-		Total int64       `json:"total"`
-		List  interface{} `json:"list"`
+		DbQueryListResponse
 	}
 )
 

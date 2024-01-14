@@ -23,16 +23,21 @@ func NewListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *ListLogic {
 	}
 }
 
-func (l *ListLogic) List(_ *types.TaskListRequest) (resp *types.TaskListResponse, err error) {
+func (l *ListLogic) List(req *types.TaskListRequest) (resp *types.TaskListResponse, err error) {
 
-	list, err := l.svcCtx.TaskModel.List()
+	total, err := l.svcCtx.TaskModel.Count(req)
 	if err != nil {
 		return nil, err
 	}
 
-	resp = &types.TaskListResponse{
-		List: list,
+	list, err := l.svcCtx.TaskModel.List(req)
+	if err != nil {
+		return nil, err
 	}
+
+	resp = &types.TaskListResponse{}
+	resp.List = list
+	resp.Total = total
 
 	return
 }

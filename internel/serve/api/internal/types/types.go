@@ -4,7 +4,7 @@ package types
 type TaskCreateRequest struct {
 	Name      string `json:"name"`                          // 任务名字
 	VideoType string `json:"video_type,options=[mp4,m3u8]"` // 视频类型
-	Type      string `json:"type,options=[url,curl]"`       // 任务类型
+	Type      string `json:"type,options=[url,curl,all]"`   // 任务类型
 	Data      string `json:"data"`                          // url 或者 curl
 }
 
@@ -12,11 +12,11 @@ type TaskCreateResponse struct {
 }
 
 type TaskListRequest struct {
+	DbQueryList
 }
 
 type TaskListResponse struct {
-	Total int64       `json:"total"`
-	List  interface{} `json:"list"`
+	DbQueryListResponse
 }
 
 type TaskUpdateRequest struct {
@@ -50,4 +50,17 @@ type TaskStatusRequest struct {
 
 type TaskStatusResponse struct {
 	Status bool `json:"status"` // 执行状态
+}
+
+type DbQueryList struct {
+	Page     int                    `json:"page,range=[0:),default=1,optional"`
+	Size     int                    `json:"size,range=(:500],default=10,optional"`
+	OrderKey string                 `json:"order_key,optional"`                // 排序字段
+	Order    string                 `json:"order,options=[desc,asc],optional"` // 排序逻辑
+	Where    map[string]interface{} `json:"where,optional"`
+}
+
+type DbQueryListResponse struct {
+	Total int64       `json:"total"`
+	List  interface{} `json:"list"`
 }

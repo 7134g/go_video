@@ -1,7 +1,9 @@
 package model
 
 import (
+	"dv/internel/serve/api/internal/types"
 	"errors"
+	"fmt"
 	"gorm.io/gorm"
 )
 
@@ -42,9 +44,45 @@ func NewTaskModel(db *gorm.DB) *TaskModel {
 	return &TaskModel{DB: db}
 }
 
-func (m *TaskModel) List() ([]Task, error) {
+func (m *TaskModel) parseWhere(where map[string]any) *gorm.DB {
+	_db := m.DB.Model(&Task{})
+	for key, value := range where {
+		if value == nil {
+			continue
+		}
+		switch key {
+		case "type":
+			if value == "all" {
+				continue
+			}
+		case "video_type":
+
+		}
+		sql := fmt.Sprintf("%s = ?", key)
+		_db = _db.Where(sql, value)
+	}
+
+	return _db
+}
+
+func (m *TaskModel) Count(turner types.PageTurner) (int64, error) {
+	where, _, _ := turner.ParseMysql()
+
+	_db := m.parseWhere(where)
+	var count int64
+	if err := _db.Count(&count).Error; err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func (m *TaskModel) List(turner types.PageTurner) ([]Task, error) {
+	where, offset, limit := turner.ParseMysql()
+
+	_db := m.parseWhere(where)
 	var data []Task
-	err := m.DB.Model(&Task{}).Find(&data).Error
+	err := _db.Offset(offset).Limit(limit).Find(&data).Error
 	if err != nil {
 		return nil, err
 	}
