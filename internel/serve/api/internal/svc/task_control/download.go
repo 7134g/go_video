@@ -32,7 +32,7 @@ func newDownload(key, fileDir, fileName string) *download {
 	return &download{
 		key:      key,
 		fileDir:  fileDir,
-		fileName: fileName,
+		fileName: fmt.Sprintf("%s.mp4", fileName),
 		stop:     make(chan struct{}),
 	}
 }
@@ -48,10 +48,10 @@ func buildKey(id uint, name string, childFlag ...string) string {
 	return key
 }
 
-func (d *download) getM3u8File(client *http.Client, _url string, header http.Header) ([]*m3u8.Segment, error) {
+func (d *download) getM3u8File(client *http.Client, req *http.Request) ([]*m3u8.Segment, error) {
 	// 构建请求
 	buf := bytes.NewBuffer(nil)
-	if err := d.get(client, _url, header, buf); err != nil {
+	if err := d.get(client, req, buf); err != nil {
 		return nil, err
 	}
 	logx.Debug(buf.String())
@@ -66,7 +66,7 @@ func (d *download) getM3u8File(client *http.Client, _url string, header http.Hea
 		if index < 0 {
 			return nil, errors.New("解析失败")
 		}
-		link, err := url.Parse(_url)
+		link, err := url.Parse(req.URL.String())
 		if err != nil {
 			return nil, err
 		}
@@ -74,7 +74,13 @@ func (d *download) getM3u8File(client *http.Client, _url string, header http.Hea
 		if err != nil {
 			return nil, err
 		}
-		return d.getM3u8File(client, link.String(), header)
+
+		request, err := http.NewRequest(http.MethodGet, link.String(), nil)
+		if err != nil {
+			return nil, err
+		}
+		request.Header = req.Header
+		return d.getM3u8File(client, request)
 	}
 
 	for _, key := range m3u8Data.Keys {
@@ -82,7 +88,7 @@ func (d *download) getM3u8File(client *http.Client, _url string, header http.Hea
 			continue
 		}
 		// 获取加密密匙
-		link, err := url.Parse(_url)
+		link, err := url.Parse(req.URL.String())
 		if err != nil {
 			return nil, err
 		}
@@ -91,7 +97,12 @@ func (d *download) getM3u8File(client *http.Client, _url string, header http.Hea
 			return nil, err
 		}
 		aesBuf := bytes.NewBuffer(nil)
-		if err := d.get(client, aesUrl.String(), header, aesBuf); err != nil {
+		request, err := http.NewRequest(http.MethodGet, aesUrl.String(), nil)
+		if err != nil {
+			return nil, err
+		}
+		request.Header = req.Header
+		if err := d.get(client, request, aesBuf); err != nil {
 			return nil, err
 		}
 
@@ -102,15 +113,10 @@ func (d *download) getM3u8File(client *http.Client, _url string, header http.Hea
 	return m3u8Data.Segments, nil
 }
 
-func (d *download) get(client *http.Client, _url string, header http.Header, write io.Writer) error {
+func (d *download) get(client *http.Client, req *http.Request, write io.Writer) error {
 	d.stop = make(chan struct{})
 	// 构建请求
-	logx.Debug(_url)
-	req, err := http.NewRequest(http.MethodGet, _url, nil)
-	if err != nil {
-		return err
-	}
-	req.Header = header
+	logx.Debug(req.URL.String())
 	resp, err := client.Do(req)
 	if resp != nil {
 		defer resp.Body.Close()

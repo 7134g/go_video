@@ -17,19 +17,28 @@ request.interceptors.request.use(
 request.interceptors.response.use(
     response => {
         let res = response.data;
-        if (response.config.responseType === "blob") {
+
+        if (res.data.code === 200) {
+            if (res.config.responseType === "blob") {
+                return res;
+            }
+
+            if (typeof res == "string") {
+                res = res ? JSON.parse(res) : res;
+            }
             return res;
+        } else {
+            // 否则抛出一个异常，将错误信息传递给调用方处理
+            throw new Error(res.data.message);
         }
 
-        if (typeof res == "string") {
-            res = res ? JSON.parse(res) : res;
-        }
-        return res;
+
     },
-    error => {
+    (error) => {
         console.log("err" + error);
-        return Promise.reject(error);
+        throw new Error(error.message);
     }
+
 );
 
 export default request;

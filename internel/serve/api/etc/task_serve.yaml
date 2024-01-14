@@ -35,3 +35,6 @@ Headers:
 # 代理地址
 Proxy: http://127.0.0.1:7890
 ProxyStatus: false
+
+# web监听
+WebProxy: 127.0.0.1:28000

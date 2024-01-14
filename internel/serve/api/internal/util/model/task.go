@@ -17,9 +17,12 @@ type Task struct {
 const (
 	VideoTypeMp4  = "mp4"
 	VideoTypeM3u8 = "m3u8"
+)
 
-	TypeUrl  = "url"
-	TypeCurl = "curl"
+const (
+	TypeUrl   = "url"
+	TypeCurl  = "curl"
+	TypeProxy = "proxy"
 )
 
 type statusEnum uint

@@ -12,6 +12,8 @@ type Config struct {
 	HttpConfig
 
 	TaskControlConfig
+
+	WebProxy string // web监听
 }
 
 type HttpConfig struct {

@@ -3,9 +3,9 @@ module dv
 go 1.21
 
 require (
+	github.com/google/martian v2.1.0+incompatible
 	github.com/jinzhu/copier v0.4.0
 	github.com/zeromicro/go-zero v1.6.1
-	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/sqlite v1.5.4
 	gorm.io/gorm v1.25.5
 )
@@ -53,4 +53,5 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231016165738-49dd2c1f3d0b // indirect
 	google.golang.org/grpc v1.60.0 // indirect
 	google.golang.org/protobuf v1.31.1-0.20231027082548-f4a6c1f6e5c1 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 )

@@ -30,6 +30,7 @@ npm run build
 
 
 ```shell
+npm install
 npm i element-plus -D
 npm i pinia -D
 npm i vue-router -D

@@ -7,9 +7,9 @@ import (
 	"dv/internel/serve/api/internal/util/m3u8"
 	"dv/internel/serve/api/internal/util/model"
 	"dv/internel/serve/api/internal/util/table"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/jinzhu/copier"
 	"github.com/zeromicro/go-zero/core/logx"
 	"io"
 	"net/http"
@@ -39,15 +39,27 @@ func newWork(task model.Task) *work {
 type particleFunc func() error
 
 func (w work) parseTask() (*download, particleFunc) {
-	var _url = w.task.Data
-	var header = tcConfig.Headers
+	var request *http.Request
 	var err error
 	switch w.task.Type {
 	case model.TypeUrl:
-		break
-	case model.TypeCurl:
-		_url, header, err = curl.Parse(w.task.Data)
+		request, err = http.NewRequest(http.MethodGet, w.task.Data, nil)
 		if err != nil {
+			return nil, fail(err)
+		}
+		request.Header = tcConfig.Headers
+	case model.TypeCurl:
+		_url, header, err := curl.Parse(w.task.Data)
+		if err != nil {
+			return nil, fail(err)
+		}
+		request, err = http.NewRequest(http.MethodGet, _url, nil)
+		if err != nil {
+			return nil, fail(err)
+		}
+		request.Header = header
+	case model.TypeProxy:
+		if err := json.Unmarshal([]byte(w.task.Data), request); err != nil {
 			return nil, fail(err)
 		}
 	default:
@@ -61,18 +73,18 @@ func (w work) parseTask() (*download, particleFunc) {
 	)
 	switch w.task.VideoType {
 	case model.VideoTypeMp4:
-		d.fileName = fmt.Sprintf("%s.mp4", d.fileName)
-		return d, w.getVideo(d, _url, header)
+		//d.fileName = fmt.Sprintf("%s.mp4", d.fileName)
+		return d, w.getVideo(d, request)
 	case model.VideoTypeM3u8:
 		d.key = buildKey(w.task.ID, w.task.Name, "m3u8")
-		return d, w.getM3u8(d, _url, header)
+		return d, w.getM3u8(d, request)
 	default:
 		return nil, fail(errors.New("video type error"))
 	}
 
 }
 
-func (w work) getVideo(d *download, _url string, header http.Header) func() error {
+func (w work) getVideo(d *download, req *http.Request) func() error {
 	savePath := filepath.Join(d.fileDir, d.fileName)
 	var flag = os.O_RDWR | os.O_CREATE | os.O_APPEND
 	if len(strings.Split(d.key, "_")) > 2 {
@@ -92,21 +104,21 @@ func (w work) getVideo(d *download, _url string, header http.Header) func() erro
 		defer func(file *os.File) {
 			_ = file.Close()
 		}(file)
-		head := http.Header{}
-		if err := copier.Copy(&head, &header); err != nil {
-			return err
-		}
+		//head := http.Header{}
+		//if err := copier.Copy(&head, &header); err != nil {
+		//	return err
+		//}
 		if d.fileSize > 0 {
-			head.Set("Range", fmt.Sprintf("bytes=%d-", d.fileSize))
+			req.Header.Set("Range", fmt.Sprintf("bytes=%d-", d.fileSize))
 		}
 
-		return d.get(tcConfig.Client, _url, head, file)
+		return d.get(tcConfig.Client, req, file)
 	}
 }
 
-func (w work) getM3u8(d *download, _url string, header http.Header) func() error {
+func (w work) getM3u8(d *download, req *http.Request) func() error {
 	beginTime := time.Now()
-	segments, err := d.getM3u8File(tcConfig.Client, _url, header)
+	segments, err := d.getM3u8File(tcConfig.Client, req)
 	if err != nil {
 		return fail(err)
 	}
@@ -127,7 +139,7 @@ func (w work) getM3u8(d *download, _url string, header http.Header) func() error
 	core.start()
 	go core.printDownloadProgress(uint(len(segments)))
 	for index, segment := range segments {
-		link, err := url.Parse(_url)
+		link, err := url.Parse(req.URL.String())
 		if err != nil {
 			return fail(err)
 		}
@@ -150,7 +162,7 @@ func (w work) getM3u8(d *download, _url string, header http.Header) func() error
 		if crypto, exist := table.CryptoVideoTable.Get(d.key); exist {
 			core.submit(func() error {
 				buf := bytes.NewBuffer(nil)
-				if err := dChild.get(tcConfig.Client, _url, header, buf); err != nil {
+				if err := dChild.get(tcConfig.Client, req, buf); err != nil {
 					return err
 				}
 				table.M3u8DownloadDataLen.Set(d.key, uint(buf.Len()))
@@ -170,7 +182,12 @@ func (w work) getM3u8(d *download, _url string, header http.Header) func() error
 				return err
 			}, dChild)
 		} else {
-			core.submit(w.getVideo(dChild, link.String(), header), dChild)
+			request, err := http.NewRequest(http.MethodGet, link.String(), nil)
+			if err != nil {
+				return fail(err)
+			}
+			request.Header = req.Header
+			core.submit(w.getVideo(dChild, request), dChild)
 		}
 
 	}
@@ -178,7 +195,7 @@ func (w work) getM3u8(d *download, _url string, header http.Header) func() error
 
 	// 合并所有分片
 	if tcConfig.UseFfmpeg {
-		if err := m3u8.MergeFilesFfmpeg(dir, w.task.Name, tcConfig.FfmpegPath); err != nil {
+		if err := m3u8.MergeFilesFfmpeg(dir, d.fileName, tcConfig.FfmpegPath); err != nil {
 			return fail(err)
 		}
 	} else {
