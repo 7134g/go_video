@@ -1,10 +1,9 @@
 import request from "@/request/init";
 
-
-var baseSiteUrl = "http://127.0.0.1:8888"
+const baseSiteUrl = "http://127.0.0.1:8888";
 
 function DeleteColumn(id) {
-    var body = {
+    let body = {
         id: id,
     };
     request.post(baseSiteUrl+'/task/delete', body).then(
@@ -19,7 +18,7 @@ function DeleteColumn(id) {
 }
 
 function InsertColumn(body) {
-    var insertURL = baseSiteUrl+'/task/create'
+    let insertURL = baseSiteUrl+'/task/create';
     request.post(insertURL, body).then(
         res => {
             console.log(res);
@@ -33,8 +32,8 @@ function InsertColumn(body) {
 }
 
 function UpdateColumn(body) {
-    var updateURL = baseSiteUrl+'/task/update'
-    request.post(insertURL, body).then(
+    let updateURL = baseSiteUrl+'/task/update';
+    request.post(updateURL, body).then(
         res => {
             console.log(res);
         }
@@ -48,7 +47,7 @@ function UpdateColumn(body) {
 
 function GetTaskList(dataPage) {
     return new Promise((resolve, reject) => {
-        var result = {
+        let result = {
             list: [],
             total: 0,
         }
@@ -57,30 +56,33 @@ function GetTaskList(dataPage) {
         let body = {
             page: dataPage.page,
             size: dataPage.size,
-            type: dataPage.type,
-            video_type: dataPage.video_type,
+            where: {
+                type: dataPage.where.type,
+                video_type: dataPage.where.video_type,
+            },
         };
 
+        // console.log("body",dataPage , body)
         request.post(listURL, body).then(
             res => {
-
                 for (const index in res.data.list) {
-                    // console.log(res.data[index])
-                    result.list.push(new TaskData(
-                        res.data.list[index].id,
-                        res.data.list[index].name,
-                        res.data.list[index].video_type,
-                        res.data.list[index].type,
-                        res.data.list[index].data,
-                        res.data.list[index].status,
-                    ))
+                    result.list.push({
+                         id:         res.data.list[index].id,
+                         name:       res.data.list[index].name,
+                         video_type: res.data.list[index].video_type,
+                         type:       res.data.list[index].type,
+                         data:       res.data.list[index].data,
+                         status:     res.data.list[index].status,
+                    })
                 }
                 result.total = res.data.total
                 result.message = "success"
+                // console.log(result)
                 resolve(result);
             }
         ).catch(
             error => {
+                // console.log("qqqqqqq", error)
                 result.message = error
                 reject(result);
             }

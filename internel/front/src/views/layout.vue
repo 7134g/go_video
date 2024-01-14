@@ -1,3 +1,11 @@
+<script lang="ts" setup>
+
+import Aside from "./portion/aside.vue";
+import Header from "./portion/header.vue";
+import Contain from "./portion/contain.vue";
+
+</script>
+
 <template>
   <el-container class="layout-container-demo" style="height: 800px">
     <el-aside >
@@ -16,14 +24,6 @@
   </el-container>
 </template>
 
-<script lang="ts" setup>
-
-import Aside from "./portion/aside.vue";
-import Header from "./portion/header.vue";
-import Contain from "./portion/contain.vue";
-
-</script>
-
 <script lang="ts">
 import { useCounterStore } from '../stores/stores.js';
 
@@ -38,9 +38,10 @@ export default {
     resetContain(type) {
       // 触发子组件B的重新渲染
       const store = useCounterStore();
-      // console.log(store.getDbType())
-      // store.setDbType(type);
-      // console.log(store.getDbType())
+      // console.log("================", type)
+      store.setTaskType(type);
+      // console.log("----------------", type)
+      // console.log("getTaskType",store.getTaskType())
       // console.log("handleCustomEvent", type)
       this.redirect = !this.redirect;
     }

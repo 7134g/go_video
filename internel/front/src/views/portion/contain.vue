@@ -1,10 +1,11 @@
 <script setup>
 
+import TaskList from "@/components/taskList.vue";
 </script>
 
 <template>
   <!--   内容   -->
-
+  <taskList v-if="showTable"></taskList>
 </template>
 
 <style scoped>
@@ -15,17 +16,13 @@
 
 <script>
 
-import requestFunc from "../../request/table";
-import {useCounterStore} from '../../stores/stores';
+import requestFunc from "@/request/table";
+import {useCounterStore} from '@/stores/stores';
 
 export default {
   data() {
     return {
-      showStruct: true,
-      showDataList: false,
-      showDataForm: false,
-      tableStruct: [],
-
+      showTable:true,
     }
   },
 
@@ -33,10 +30,7 @@ export default {
 
 
   },
-  mounted() {
-    // 在其他方法或是生命周期中也可以调用方法
-    this.getTables()
-  }
+
 }
 
 

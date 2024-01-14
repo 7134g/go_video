@@ -26,15 +26,16 @@
             <el-icon></el-icon>任务列表
           </template>
 
-            <el-menu-item index="2-1-1">curl</el-menu-item>
-            <el-menu-item index="2-1-2">url</el-menu-item>
-            <el-menu-item index="2-1-3">all</el-menu-item>
+            <el-menu-item @click="setTaskType('all')" index="2-1-1">all</el-menu-item>
+            <el-menu-item @click="setTaskType('url')" index="2-1-2">url</el-menu-item>
+            <el-menu-item @click="setTaskType('curl')" index="2-1-3">curl</el-menu-item>
+            <el-menu-item @click="setTaskType('proxy')" index="2-1-4">proxy</el-menu-item>
 
         </el-sub-menu>
 
         <el-sub-menu index="3">
           <template #title>
-            <el-icon></el-icon>错误信息
+            <el-icon></el-icon>信息
           </template>
 
           <el-menu-item index="3-1-1">错误任务</el-menu-item>
@@ -68,8 +69,9 @@ el-menu {
 import { Menu as IconMenu, Message, Setting } from '@element-plus/icons-vue'
 export default {
   methods: {
-
-
+    setTaskType(type){
+      this.$emit('render-contain', type);
+    }
   },
 
 }
