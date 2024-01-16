@@ -16,8 +16,6 @@ import TaskList from "@/components/taskList.vue";
 
 <script>
 
-import requestFunc from "@/request/table";
-import {useCounterStore} from '@/stores/stores';
 
 export default {
   data() {

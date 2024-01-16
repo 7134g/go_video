@@ -12,7 +12,7 @@
 
   </div>
 
-  <el-card class="box-card">
+  <el-card style="width: 90%" class="box-card">
     <el-row>
       <el-text class="w-150px mb-2" truncated>
         详细
@@ -22,7 +22,7 @@
 
     <el-row>
       <el-text class="mx-1">
-        {{ detail }}
+        <p v-for="(segment, index) in messageSegments" :key="index">{{ segment }}</p>
       </el-text>
     </el-row>
 
@@ -32,17 +32,24 @@
 
 <script>
 export  default {
-  props: ['detail'],
+  props: ['message'],
+  emits: ['closeDataList'],
 
   data() {
     return {
+      detail:"",
     }
   },
 
+  computed: {
+    messageSegments() {
+      return this.message.split("\\")
+    }
+  },
 
   methods: {
     closeDetail(){
-
+      this.$emit('closeDataList');
     },
   },
 }
@@ -50,14 +57,6 @@ export  default {
 </script>
 
 <style scoped>
-.text {
-  font-size: 14px;
-}
-
-.item {
-  padding: 18px 0;
-}
-
 .box-card {
   width: 480px;
 }

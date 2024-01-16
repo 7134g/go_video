@@ -13,7 +13,7 @@ import Contain from "./portion/contain.vue";
     </el-aside>
 
     <el-container>
-      <el-header style="text-align: right; font-size: 12px">
+      <el-header style="">
         <Header></Header>
       </el-header>
 
@@ -51,6 +51,9 @@ export default {
 
 <style scoped>
 .layout-container-demo .el-header {
+  height: 100px;
+  text-align: center;
+  font-size: 15px;
   position: relative;
   background-color: var(--el-color-primary-light-7);
   color: var(--el-text-color-primary);

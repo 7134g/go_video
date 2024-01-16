@@ -2,7 +2,7 @@ import request from "@/request/init";
 
 const baseSiteUrl = "http://127.0.0.1:8888";
 
-function DeleteColumn(id) {
+function DeleteTask(id) {
     let body = {
         id: id,
     };
@@ -17,7 +17,7 @@ function DeleteColumn(id) {
     )
 }
 
-function InsertColumn(body) {
+function InsertTask(body) {
     let insertURL = baseSiteUrl+'/task/create';
     request.post(insertURL, body).then(
         res => {
@@ -31,7 +31,7 @@ function InsertColumn(body) {
 
 }
 
-function UpdateColumn(body) {
+function UpdateTask(body) {
     let updateURL = baseSiteUrl+'/task/update';
     request.post(updateURL, body).then(
         res => {
@@ -90,6 +90,26 @@ function GetTaskList(dataPage) {
     });
 }
 
+function RunTask(body) {
+    return new Promise((resolve, reject) => {
+        let runURL = baseSiteUrl+'/task/run';
+        request.get(runURL, body).then(
+            res => {
+                // console.log(res);
+                resolve(res);
+            }
+        ).catch(
+            error => {
+                console.error(error);
+                reject(error);
+            }
+        )
+    })
+
+
+}
+
 export default {
     GetTaskList,
+    RunTask,
 };

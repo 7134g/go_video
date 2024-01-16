@@ -5,22 +5,21 @@ const small = ref(false)
 const background = ref(false)
 const disabled = ref(false)
 
-import Card from "@/components/card.vue";
 import Insert from "@/components/insert.vue";
 </script>
 
 <template>
   <div v-if="showDataList" >
-    <el-table :data="tableData" style="width: 100%" height="250">
+    <el-table :data="tableData" style="width: 100%" height="441">
       <el-table-column fixed prop="id" label="任务号" width="150" />
       <el-table-column prop="name" label="任务名称" width="120" />
       <el-table-column prop="video_type" label="视频类型" width="120" />
       <el-table-column prop="type" label="任务类型" width="100" />
       <el-table-column prop="status" label="任务状态" width="100" />
-      <el-table-column prop="data" label="任务数据" width="800" />
+      <el-table-column prop="data" show-overflow-tooltip label="任务数据" width="800" />
       <el-table-column fixed="right" label="操作" width="120">
         <template #default="{ row }">
-          <el-button link type="primary" size="large" @click="changeCard(row.data)">Detail</el-button>
+          <el-button link type="primary" size="large" @click="openCard(row.data)">Detail</el-button>
           <el-button link type="primary" size="large" @click="openForm(row)">Edit</el-button>
         </template>
       </el-table-column>
@@ -44,9 +43,9 @@ import Insert from "@/components/insert.vue";
 
 
 
-  <Card v-if="showCard" :message="detail" @closeDataList-flag="changeCard"></Card>
+  <Card v-if="showCard" :message="detail" @closeDataList="closeCard"></Card>
 
-  <Insert v-if="showDataForm" @closeForm-flag="closeForm"></Insert>
+  <Insert v-if="showDataForm" @closeForm="closeForm"></Insert>
 
 </template>
 
@@ -56,10 +55,12 @@ import Insert from "@/components/insert.vue";
 
 <script>
 
-import requestFunc from "@/request/table";
+import requestFunc from "@/request/task";
 import {useCounterStore} from '@/stores/stores';
+import Card from "@/components/card.vue";
 
 export default {
+  components: { Card },
 
   data() {
     return {
@@ -72,7 +73,7 @@ export default {
 
 
       currentPage: 1,
-      currentSize: 2,
+      currentSize: 10,
       total: 10,
       tableData: [{
         "id": 1,
@@ -89,12 +90,12 @@ export default {
   methods: {
     getTables(dp) {
       dp = useCounterStore().getDataPage()
-      console.log("post", dp)
+      // console.log("post", dp)
       requestFunc.GetTaskList(dp).then(result => {
         this.tableData = result.list
         this.total = result.total
         // console.log(JSON.stringify(this.tableData))
-        this.$message.success('请求成功');
+        // this.$message.success('请求成功');
       }).catch(error => {
         console.log(error)
         this.$message.error('请求失败');
@@ -104,23 +105,27 @@ export default {
     handleCurrentChange(val) {
       let dp = useCounterStore().getDataPage()
       dp.page = val
-      console.log(dp)
+      // console.log(dp)
       this.getTables(dp)
     },
 
     handleSizeChange(){
+      let dp = useCounterStore().getDataPage()
+      dp.size = this.currentSize
       console.log("page-size 改变时触发")
     },
 
-
-    changeCard(detail) {
+    openCard(detail) {
+      this.showDataList = false
+      this.showCard = true
+      this.detail = detail
+    },
+    closeCard() {
       this.showDataList = !this.showDataList // 关闭表结构列表，显示详细数据内容
       this.showCard = !this.showCard
-      this.detail = detail
-      // useCounterStore().setTableName(id)
     },
 
-    openForm(data){
+    openForm(task){
       this.showDataList = false
       this.showDataForm = true
       // useCounterStore().setDataStruct(id)
