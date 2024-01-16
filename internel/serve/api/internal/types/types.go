@@ -38,7 +38,7 @@ type TaskDeleteResponse struct {
 }
 
 type TaskRunRequest struct {
-	Stop bool `form:"stop"`
+	Stop bool `form:"stop,optional"`
 }
 
 type TaskRunResponse struct {

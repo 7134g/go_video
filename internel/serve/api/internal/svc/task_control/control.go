@@ -112,6 +112,7 @@ func (c *TaskControl) submit(fn func() error, d *download) {
 }
 
 func (c *TaskControl) Run(task []model.Task) {
+	logx.Info("running ......")
 	defer c.Stop()
 	c.start()
 

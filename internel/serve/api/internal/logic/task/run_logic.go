@@ -24,9 +24,10 @@ func NewRunLogic(ctx context.Context, svcCtx *svc.ServiceContext) *RunLogic {
 }
 
 func (l *RunLogic) Run(req *types.TaskRunRequest) (resp *types.TaskRunResponse, err error) {
+	//return &types.TaskRunResponse{Message: "停止成功"}, err
 	if req.Stop {
 		l.svcCtx.TaskControl.Stop()
-		return &types.TaskRunResponse{Message: "正在停止中"}, err
+		return &types.TaskRunResponse{Message: "停止成功"}, err
 	}
 
 	task := make([]model.Task, 0)

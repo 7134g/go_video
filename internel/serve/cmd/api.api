@@ -86,7 +86,7 @@ type (
 
 type (
 	TaskRunRequest {
-		Stop bool `form:"stop"`
+		Stop bool `form:"stop,optional"`
 	}
 	TaskRunResponse {
 		Message string `json:"message"`
