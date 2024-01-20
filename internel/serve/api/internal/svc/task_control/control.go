@@ -46,7 +46,11 @@ func (c *TaskControl) incDoneCount() {
 	c.doneCount++
 }
 
-func (c *TaskControl) printDownloadProgress(taskTotal uint) {
+func (c *TaskControl) printDownloadProgress(name string, taskTotal uint) {
+	if name == "" {
+		return
+	}
+
 	ticker := time.NewTicker(time.Second * 3)
 	var lastDownloadTimeSince uint
 	for {
@@ -54,15 +58,15 @@ func (c *TaskControl) printDownloadProgress(taskTotal uint) {
 		case <-c.printStop:
 			return
 		case <-ticker.C:
-			nowDownloadDataLen, exist := table.M3u8DownloadDataLen.Get(c.Name)
-			if !exist || nowDownloadDataLen == 0 {
+			nowDownloadDataLen, exist := table.M3u8DownloadDataLen.Get(name)
+			if !exist {
 				continue
 			}
 
 			downloadTimeSince := nowDownloadDataLen - lastDownloadTimeSince
 			speed, unit := calc.UnitReturn(float64(downloadTimeSince))
 			log.Println(fmt.Sprintf("%s 下载进度(%d/%d) 速度：%.2f %s/s 完成度：%.2f ",
-				c.Name,
+				name,
 				c.doneCount, taskTotal,
 				speed, unit,
 				float64(c.doneCount)/float64(taskTotal)*100,
@@ -72,7 +76,7 @@ func (c *TaskControl) printDownloadProgress(taskTotal uint) {
 	}
 }
 
-func (c *TaskControl) submit(fn func() error, d *download) {
+func (c *TaskControl) submit(fn particleFunc, params []any) {
 	c.wg.Add(1)
 	select {
 	case c.vacancy <- struct{}{}:
@@ -80,6 +84,8 @@ func (c *TaskControl) submit(fn func() error, d *download) {
 		logx.Info("cancel stop")
 		return
 	}
+
+	d := params[0].(*download)
 	go threading.GoSafe(func() {
 		defer func() {
 			c.wg.Done()
@@ -89,15 +95,22 @@ func (c *TaskControl) submit(fn func() error, d *download) {
 		keyPart := strings.Split(d.key, "_")
 		taskId, _ := strconv.Atoi(keyPart[0])
 
-		if err := fn(); err != nil {
+		if err := fn([]any{d}); err != nil {
 			table.IncErrCount(d.key)
 			if table.GetErrCount(d.key) >= tcConfig.TaskErrorMaxCount {
 				_ = tasKModel.UpdateStatus(uint(taskId), model.StatusError)
-				logx.Error(saveErrorCellData(d))
+				logx.Error(keyPart[1], "任务失败")
 				return
 			} else {
-				logx.Error(d.key, err)
-				c.submit(fn, d)
+				logx.Errorw(
+					"error message",
+					logx.Field("err_count", table.GetErrCount(d.key)),
+					logx.Field("key", d.key),
+					logx.Field("error", err),
+				)
+				time.Sleep(time.Second * 5)
+				c.submit(fn, []any{d}) // 重试
+				return
 			}
 		}
 
@@ -116,18 +129,19 @@ func (c *TaskControl) Run(tasks []model.Task) {
 	defer c.Stop()
 	c.start()
 
-	go c.printDownloadProgress(uint(len(tasks)))
+	//go c.printDownloadProgress(uint(len(tasks)))
 
 	for _, m := range tasks {
 		w := newWork(m)
-		d, particle := w.parseTask()
+		particle, d := w.parseTask()
 		if particle == nil {
 			continue
 		}
 
 		_ = tasKModel.UpdateStatus(m.ID, model.StatusRunning)
-		c.submit(particle, d)
+		c.submit(particle, []any{d})
 	}
 	c.wg.Wait()
 
+	logx.Info("所有任务已经结束")
 }

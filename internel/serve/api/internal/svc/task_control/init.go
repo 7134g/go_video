@@ -16,13 +16,10 @@ import (
 
 var (
 	tcConfig  *taskControlConfig
-	errModel  *model.ErrorModel
 	tasKModel *model.TaskModel
 )
 
 type TaskControl struct {
-	Name string // 任务名
-
 	wg        sync.WaitGroup
 	mux       sync.Mutex
 	ctx       context.Context
@@ -64,7 +61,6 @@ func InitTask(c config.Config) {
 		c.UseFfmpeg = false
 	}
 
-	errModel = model.NewErrorModel(db.GetDB())
 	tasKModel = model.NewTaskModel(db.GetDB())
 	tcConfig = &taskControlConfig{
 		Client:            &http.Client{Transport: getHttpProxy(c.HttpConfig)},

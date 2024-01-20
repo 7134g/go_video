@@ -18,6 +18,8 @@ import (
 )
 
 type download struct {
+	req *http.Request
+
 	key      string // 任务标识
 	fileDir  string // 目录
 	fileName string // 文件名

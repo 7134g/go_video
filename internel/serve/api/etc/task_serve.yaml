@@ -20,7 +20,7 @@ ConcurrencyM3u8: 10
 # 存储位置，不填默认当前目录下download
 SaveDir: ./download
 # 任务连续最大错误次数
-TaskErrorMaxCount: 50
+TaskErrorMaxCount: 20
 # 错误时候休眠多久后重试
 TaskErrorDuration: 1
 # 使用ffmpeg进行合并分片
