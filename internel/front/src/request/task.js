@@ -9,7 +9,7 @@ function DeleteTask(id) {
         };
         request.post(baseSiteUrl+'/task/delete', body).then(
             res => {
-                console.log(res);
+                // console.log(res);
                 resolve(res);
             }
         ).catch(
@@ -27,7 +27,7 @@ function InsertTask(body) {
         let insertURL = baseSiteUrl+'/task/create';
         request.post(insertURL, body).then(
             res => {
-                console.log(res);
+                // console.log(res);
                 resolve(res);
             }
         ).catch(
@@ -47,7 +47,7 @@ function UpdateTask(body) {
         let updateURL = baseSiteUrl+'/task/update';
         request.post(updateURL, body).then(
             res => {
-                console.log(res);
+                // console.log(res);
                 resolve(res);
             }
         ).catch(

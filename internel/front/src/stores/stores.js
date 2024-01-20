@@ -22,6 +22,7 @@ export const useCounterStore = defineStore('counter', {
     return {
       formSwitch:1,
       taskData:{
+        id:0,
         name: '',
         video_type: '',
         type: '',
@@ -48,6 +49,9 @@ export const useCounterStore = defineStore('counter', {
     setTaskType(type) {
       // console.log("aaaa", type)
       this.dataPage.where.type = type
+    },
+    getTaskType(){
+      return this.dataPage.where.type
     },
 
 

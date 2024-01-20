@@ -12,7 +12,7 @@
 
         <el-form-item label="视频类型">
           <el-select v-model="formData.video_type" placeholder="填写视频类型">
-            <el-option label="mp3" value="mp3" />
+            <el-option label="mp4" value="mp4" />
             <el-option label="m3u8" value="m3u8" />
           </el-select>
         </el-form-item>
@@ -39,7 +39,7 @@
         <el-form-item>
           <el-button v-if="insertFlag" type="primary" @click="addTask">提交</el-button>
           <el-button v-if="!insertFlag" type="primary" @click="updateTask">更新</el-button>
-          <el-button @click="backButton">取消</el-button>
+          <el-button @click="cancelButton">取消</el-button>
         </el-form-item>
 
       </el-form>
@@ -99,6 +99,7 @@ export default {
         case 2:
           this.insertFlag=false
           this.formData={
+            id: store.taskData.id,
             name: store.taskData.name,
             video_type: store.taskData.video_type,
             type: store.taskData.type,
@@ -110,23 +111,23 @@ export default {
 
     },
 
-    backButton(){
-      console.log("back button")
+    cancelButton(){
+      console.log("cancel button")
       let fs = useCounterStore().formSwitch
       switch (fs) {
         case 1:
-          this.$emit('open-form');
           break
         case 2:
-          this.$emit('close-form');
           break
       }
+      this.$emit('close-form');
     },
 
     addTask(){
       requestFunc.InsertTask(this.formData).then(result => {
-        console.log(result)
+        // console.log(result)
         this.$message.success('请求成功');
+        this.$emit('close-form');
       }).catch(error => {
         console.log(error)
         this.$message.error('请求失败');
@@ -136,13 +137,14 @@ export default {
 
     updateTask(){
       requestFunc.UpdateTask(this.formData).then(result => {
-        console.log(result)
+        // console.log(result)
         this.$message.success('请求成功');
       }).catch(error => {
         console.log(error)
         this.$message.error('请求失败');
       });
 
+      this.$emit('close-form');
     },
 
 

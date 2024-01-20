@@ -63,6 +63,7 @@ import Card from "@/components/card.vue";
 
 export default {
   components: { Card },
+  emits:['render-task-list'],
 
   data() {
     return {
@@ -133,23 +134,29 @@ export default {
       useCounterStore().setTaskData(task)
       this.showDataList = false
       this.showDataForm = true
-
-      this.$emit('render-task-list');
     },
+
     closeForm(){
+      console.log("close form")
       this.showDataList = !this.showDataList
       this.showDataForm = !this.showDataForm
     },
 
     deleteData(id){
-      requestFunc.DeleteTask(id).then(result => {
+      requestFunc.DeleteTask(id).then(_ => {
         this.$message.success('请求成功');
       }).catch(error => {
         console.log(error)
         this.$message.error('请求失败');
       });
-      this.$emit('render-task-list');
-    }
+
+      this.render()
+    },
+
+    render(){
+      this.$emit('render-task-list', useCounterStore().getTaskType());
+    },
+
 
   },
   mounted() {

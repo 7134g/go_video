@@ -3,6 +3,7 @@
 import Aside from "./portion/aside.vue";
 import Header from "./portion/header.vue";
 import Contain from "./portion/contain.vue";
+import TaskList from "../components/taskList.vue";
 
 </script>
 
@@ -19,7 +20,7 @@ import Contain from "./portion/contain.vue";
 
       <el-main>
         <Contain v-if="containHidden" :key="redirect"></Contain>
-        <formData v-if="formFlag" @open-form="openForm"></formData>
+        <formData v-if="formFlag" @close-form="closeForm"></formData>
       </el-main>
     </el-container>
   </el-container>
@@ -57,7 +58,14 @@ export default {
       console.log("layout open form")
       this.formFlag = !this.formFlag
       this.containHidden = !this.containHidden;
-    }
+    },
+
+    closeForm(){
+      console.log("layout close form")
+      this.formFlag = false
+      this.containHidden = true
+      this.resetContain(useCounterStore().getTaskType())
+    },
   }
 }
 </script>
