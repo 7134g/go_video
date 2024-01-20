@@ -38,5 +38,5 @@ func (l *RunLogic) Run(req *types.TaskRunRequest) (resp *types.TaskRunResponse, 
 	}
 	go l.svcCtx.TaskControl.Run(task)
 
-	return
+	return &types.TaskRunResponse{Message: "开始运行..."}, nil
 }

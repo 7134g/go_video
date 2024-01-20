@@ -136,6 +136,23 @@ function RunTask(body) {
         )
     })
 
+}
+
+function GetProgramStatus(body) {
+    return new Promise((resolve, reject) => {
+        let runURL = baseSiteUrl+'/task/status';
+        request.get(runURL, body).then(
+            res => {
+                // console.log(res);
+                resolve(res);
+            }
+        ).catch(
+            error => {
+                console.error(error);
+                reject(error);
+            }
+        )
+    })
 
 }
 
@@ -145,4 +162,5 @@ export default {
     DeleteTask,
     InsertTask,
     UpdateTask,
+    GetProgramStatus,
 };

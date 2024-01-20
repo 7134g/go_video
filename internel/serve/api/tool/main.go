@@ -39,7 +39,7 @@ func main() {
 		return
 	}
 
-	task_control.InitTaskConfig(c)
+	task_control.InitTask(c)
 	core := task_control.NewTaskControl(c.TaskControlConfig.Concurrency)
 	core.Run(taskList)
 }

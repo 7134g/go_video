@@ -78,14 +78,15 @@ export default {
       currentPage: 1,
       currentSize: 10,
       total: 10,
-      tableData: [{
-        "id": 1,
-        "name": "test1",
-        "video_type": "mp4",
-        "type": "url",
-        "data": "http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4",
-        "status": 0
-      }],
+      // tableData: [{
+      //   "id": 1,
+      //   "name": "test1",
+      //   "video_type": "mp4",
+      //   "type": "url",
+      //   "data": "http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4",
+      //   "status": 0
+      // }],
+      tableData:[],
 
     }
   },
@@ -97,8 +98,8 @@ export default {
       requestFunc.GetTaskList(dp).then(result => {
         this.tableData = result.list
         this.total = result.total
-        console.log(this.tableData)
-        console.log(JSON.stringify(this.tableData))
+        // console.log(this.tableData)
+        // console.log(JSON.stringify(this.tableData))
         // this.$message.success('请求成功');
       }).catch(error => {
         console.log(error)

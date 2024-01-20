@@ -53,7 +53,7 @@ func NewTaskControl(concurrency uint) *TaskControl {
 	return core
 }
 
-func InitTaskConfig(c config.Config) {
+func InitTask(c config.Config) {
 	dir, err := filepath.Abs(c.SaveDir)
 	if err != nil {
 		panic(err)
@@ -65,11 +65,13 @@ func InitTaskConfig(c config.Config) {
 	}
 
 	errModel = model.NewErrorModel(db.GetDB())
+	tasKModel = model.NewTaskModel(db.GetDB())
 	tcConfig = &taskControlConfig{
 		Client:            &http.Client{Transport: getHttpProxy(c.HttpConfig)},
 		Headers:           getHeader(c.HttpConfig),
 		TaskControlConfig: c.TaskControlConfig,
 	}
+
 }
 
 func getHttpProxy(c config.HttpConfig) http.RoundTripper {

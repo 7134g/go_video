@@ -103,7 +103,7 @@ func (m *TaskModel) UpdateStatus(id uint, status statusEnum) error {
 		return errors.New("status error")
 	}
 
-	return m.DB.Model(&Task{}).Where("id = ?", id).Update("status= ?", status).Error
+	return m.DB.Model(&Task{}).Where("id = ?", id).Update("status", status).Error
 }
 
 func (m *TaskModel) Exist(data string) (*Task, error) {

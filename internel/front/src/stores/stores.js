@@ -21,6 +21,7 @@ export const useCounterStore = defineStore('counter', {
   state: () => {
     return {
       formSwitch:1,
+      taskStatus: false,
       taskData:{
         id:0,
         name: '',
@@ -54,6 +55,11 @@ export const useCounterStore = defineStore('counter', {
       return this.dataPage.where.type
     },
 
+
+
+    setTaskStatus(status){
+      this.taskStatus = status
+    },
 
     setTaskData(task) {
       this.taskData = task

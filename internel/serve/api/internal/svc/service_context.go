@@ -21,6 +21,7 @@ type ServiceContext struct {
 
 func NewServiceContext(c config.Config) *ServiceContext {
 	db.InitSqlite(c.DB)
+	task_control.InitTask(c)
 
 	return &ServiceContext{
 		Config:          c,

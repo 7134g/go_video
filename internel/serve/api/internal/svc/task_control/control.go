@@ -111,14 +111,14 @@ func (c *TaskControl) submit(fn func() error, d *download) {
 	})
 }
 
-func (c *TaskControl) Run(task []model.Task) {
+func (c *TaskControl) Run(tasks []model.Task) {
 	logx.Info("running ......")
 	defer c.Stop()
 	c.start()
 
-	go c.printDownloadProgress(uint(len(task)))
+	go c.printDownloadProgress(uint(len(tasks)))
 
-	for _, m := range task {
+	for _, m := range tasks {
 		w := newWork(m)
 		d, particle := w.parseTask()
 		if particle == nil {
