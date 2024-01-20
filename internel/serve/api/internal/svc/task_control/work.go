@@ -208,7 +208,7 @@ func (w work) getM3u8(params []interface{}) error {
 		}
 	}
 
-	//_ = os.RemoveAll(dir) // 删除文件夹
+	_ = os.RemoveAll(dir) // 删除文件夹
 
 	logx.Infof("%s ===================> 任务完成,耗时 %s\n", w.task.Name, time.Since(beginTime))
 	return nil

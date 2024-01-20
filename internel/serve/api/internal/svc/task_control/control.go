@@ -87,6 +87,9 @@ func (c *TaskControl) submit(fn particleFunc, params []any) {
 
 	d := params[0].(*download)
 	go threading.GoSafe(func() {
+		if d == nil {
+			return
+		}
 		defer func() {
 			c.wg.Done()
 			<-c.vacancy
@@ -104,11 +107,11 @@ func (c *TaskControl) submit(fn particleFunc, params []any) {
 			} else {
 				logx.Errorw(
 					"error message",
-					logx.Field("err_count", table.GetErrCount(d.key)),
+					logx.Field("retry_count", table.GetErrCount(d.key)),
 					logx.Field("key", d.key),
 					logx.Field("error", err),
 				)
-				time.Sleep(time.Second * 5)
+				time.Sleep(time.Second * time.Duration(tcConfig.TaskErrorDuration))
 				c.submit(fn, []any{d}) // 重试
 				return
 			}
