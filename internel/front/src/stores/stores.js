@@ -20,6 +20,14 @@ import { defineStore } from 'pinia'
 export const useCounterStore = defineStore('counter', {
   state: () => {
     return {
+      formSwitch:1,
+      taskData:{
+        name: '',
+        video_type: '',
+        type: '',
+        data: '',
+      },
+
       dataPage: {
         where: {
           type: "all",
@@ -41,18 +49,15 @@ export const useCounterStore = defineStore('counter', {
       // console.log("aaaa", type)
       this.dataPage.where.type = type
     },
-    getTaskType() {
-      return this.dataPage.where.type
-    },
-
-    setVideoType(video_type) {
-      this.dataPage.where.video_type = video_type
-    },
-    getVideoType() {
-      return this.dataPage.where.video_type
-    },
 
 
+    setTaskData(task) {
+      this.taskData = task
+    },
+
+    setFormSwitch(value) {
+      this.formSwitch = value
+    },
 
   },
 })

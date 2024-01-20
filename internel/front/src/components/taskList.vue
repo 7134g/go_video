@@ -5,22 +5,23 @@ const small = ref(false)
 const background = ref(false)
 const disabled = ref(false)
 
-import Insert from "@/components/insert.vue";
+import formData from "@/components/formData.vue";
 </script>
 
 <template>
   <div v-if="showDataList" >
     <el-table :data="tableData" style="width: 100%" height="441">
-      <el-table-column fixed prop="id" label="任务号" width="150" />
-      <el-table-column prop="name" label="任务名称" width="120" />
-      <el-table-column prop="video_type" label="视频类型" width="120" />
-      <el-table-column prop="type" label="任务类型" width="100" />
-      <el-table-column prop="status" label="任务状态" width="100" />
-      <el-table-column prop="data" show-overflow-tooltip label="任务数据" width="800" />
-      <el-table-column fixed="right" label="操作" width="120">
+      <el-table-column fixed prop="id" label="任务号" width="80" />
+      <el-table-column prop="name" label="任务名称" width="150" />
+      <el-table-column prop="video_type" label="视频类型" width="80" />
+      <el-table-column prop="type" label="任务类型" width="80" />
+      <el-table-column prop="status" label="任务状态" width="80" />
+      <el-table-column prop="data" show-overflow-tooltip label="任务数据" width="900" />
+      <el-table-column fixed="right" label="操作" width="180">
         <template #default="{ row }">
-          <el-button link type="primary" size="large" @click="openCard(row.data)">Detail</el-button>
-          <el-button link type="primary" size="large" @click="openForm(row)">Edit</el-button>
+          <el-button link type="primary" size="large" @click="openCard(row.data)">查看数据</el-button>
+          <el-button link type="primary" size="large" @click="editForm(row)">编辑</el-button>
+          <el-button link type="primary" size="large" @click="deleteData(row.id)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -45,7 +46,7 @@ import Insert from "@/components/insert.vue";
 
   <Card v-if="showCard" :message="detail" @closeDataList="closeCard"></Card>
 
-  <Insert v-if="showDataForm" @closeForm="closeForm"></Insert>
+  <formData v-if="showDataForm" @close-form="closeForm"></formData>
 
 </template>
 
@@ -125,15 +126,27 @@ export default {
       this.showCard = !this.showCard
     },
 
-    openForm(task){
+    editForm(task){
+      console.log("edit task", task)
+      useCounterStore().setFormSwitch(2)
+      useCounterStore().setTaskData(task)
       this.showDataList = false
       this.showDataForm = true
-      // useCounterStore().setDataStruct(id)
+
     },
     closeForm(){
       this.showDataList = !this.showDataList
       this.showDataForm = !this.showDataForm
     },
+
+    deleteData(id){
+      requestFunc.DeleteTask(id).then(result => {
+        this.$message.success('请求成功');
+      }).catch(error => {
+        console.log(error)
+        this.$message.error('请求失败');
+      });
+    }
 
   },
   mounted() {

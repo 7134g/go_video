@@ -14,11 +14,12 @@ import Contain from "./portion/contain.vue";
 
     <el-container>
       <el-header style="">
-        <Header></Header>
+        <Header @open-form="openForm"></Header>
       </el-header>
 
       <el-main>
-        <Contain :key="redirect"></Contain>
+        <Contain v-if="containHidden" :key="redirect"></Contain>
+        <formData v-if="formFlag" @open-form="openForm"></formData>
       </el-main>
     </el-container>
   </el-container>
@@ -26,24 +27,36 @@ import Contain from "./portion/contain.vue";
 
 <script lang="ts">
 import { useCounterStore } from '../stores/stores.js';
+import formData from "../components/formData.vue";
 
 
 export default {
+  components: { formData },
+
   data() {
     return {
-      redirect: false
+      redirect: false, // 重新加载
+
+      containHidden: true,// 隐藏列表
+      formFlag: false, // 显示表单
     }
   },
   methods: {
     resetContain(type) {
+      console.log("render-contain", type)
       // 触发子组件B的重新渲染
       const store = useCounterStore();
-      // console.log("================", type)
       store.setTaskType(type);
-      // console.log("----------------", type)
-      // console.log("getTaskType",store.getTaskType())
-      // console.log("handleCustomEvent", type)
       this.redirect = !this.redirect;
+
+      this.formFlag = false
+      this.containHidden = true
+    },
+
+    openForm(){
+      console.log("layout open form")
+      this.formFlag = !this.formFlag
+      this.containHidden = !this.containHidden;
     }
   }
 }

@@ -3,45 +3,60 @@ import request from "@/request/init";
 const baseSiteUrl = "http://127.0.0.1:8888";
 
 function DeleteTask(id) {
-    let body = {
-        id: id,
-    };
-    request.post(baseSiteUrl+'/task/delete', body).then(
-        res => {
-            console.log(res);
-        }
-    ).catch(
-        error => {
-            console.error(error);
-        }
-    )
+    return new Promise((resolve, reject) => {
+        let body = {
+            id: id,
+        };
+        request.post(baseSiteUrl+'/task/delete', body).then(
+            res => {
+                console.log(res);
+                resolve(res);
+            }
+        ).catch(
+            error => {
+                console.error(error);
+                reject(error);
+            }
+        )
+    })
+
 }
 
 function InsertTask(body) {
-    let insertURL = baseSiteUrl+'/task/create';
-    request.post(insertURL, body).then(
-        res => {
-            console.log(res);
-        }
-    ).catch(
-        error => {
-            console.error(error);
-        }
-    )
+    return new Promise((resolve, reject) => {
+        let insertURL = baseSiteUrl+'/task/create';
+        request.post(insertURL, body).then(
+            res => {
+                console.log(res);
+                resolve(res);
+            }
+        ).catch(
+            error => {
+                console.error(error);
+                reject(error);
+            }
+        )
+    })
+
 
 }
 
 function UpdateTask(body) {
-    let updateURL = baseSiteUrl+'/task/update';
-    request.post(updateURL, body).then(
-        res => {
-            console.log(res);
-        }
-    ).catch(
-        error => {
-            console.error(error);
-        }
-    )
+
+    return new Promise((resolve, reject) => {
+        let updateURL = baseSiteUrl+'/task/update';
+        request.post(updateURL, body).then(
+            res => {
+                console.log(res);
+                resolve(res);
+            }
+        ).catch(
+            error => {
+                console.error(error);
+                reject(error);
+            }
+        )
+    })
 
 }
 
@@ -112,4 +127,7 @@ function RunTask(body) {
 export default {
     GetTaskList,
     RunTask,
+    DeleteTask,
+    InsertTask,
+    UpdateTask,
 };
