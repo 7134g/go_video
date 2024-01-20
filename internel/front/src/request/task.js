@@ -81,13 +81,28 @@ function GetTaskList(dataPage) {
         request.post(listURL, body).then(
             res => {
                 for (const index in res.data.list) {
+                    var task_status ;
+                    switch (res.data.list[index].status) {
+                        case 0:
+                            task_status="未开始"
+                            break
+                        case 1:
+                            task_status="运行中"
+                            break
+                        case 2:
+                            task_status="执行失败"
+                            break
+                        case 3:
+                            task_status="完成"
+                            break
+                    }
                     result.list.push({
                          id:         res.data.list[index].id,
                          name:       res.data.list[index].name,
                          video_type: res.data.list[index].video_type,
                          type:       res.data.list[index].type,
                          data:       res.data.list[index].data,
-                         status:     res.data.list[index].status,
+                         status:     task_status,
                     })
                 }
                 result.total = res.data.total
