@@ -11,16 +11,17 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 	"net"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 )
 
 var (
-	Proxy       *martian.Proxy
-	ProxyServer string
+	Proxy    *martian.Proxy
+	CertFlag bool
+	Address  = ":1080"
 	//UserName    string
 	//PassWord    string
+	//ProxyServer string
 )
 
 func Martian(taskDB *model.TaskModel) error {
@@ -40,8 +41,8 @@ func Martian(taskDB *model.TaskModel) error {
 	Proxy.SetRequestModifier(group)
 	Proxy.SetResponseModifier(group)
 	// 使用代理发请求时候装载证书
-	if ProxyServer != "" {
-		fmt.Println("开启代理：", ProxyServer)
+	if CertFlag {
+		//fmt.Println("开启代理：", ProxyServer)
 		CertReload()
 		mc, err := GetMITMConfig()
 		if err != nil {
@@ -51,7 +52,7 @@ func Martian(taskDB *model.TaskModel) error {
 	}
 
 	//log.SetLevel(log.Silent)
-	listener, err := net.Listen("tcp", ":1080")
+	listener, err := net.Listen("tcp", Address)
 	if err != nil {
 		return err
 	}
@@ -70,14 +71,14 @@ type Skip struct {
 }
 
 func (r *Skip) ModifyRequest(req *http.Request) error {
-	if ProxyServer != "" {
-		u, err := url.Parse(ProxyServer)
-		if err != nil {
-			return err
-		}
-
-		Proxy.SetDownstreamProxy(u)
-	}
+	//if ProxyServer != ""{
+	//	u, err := url.Parse(ProxyServer)
+	//	if err != nil {
+	//		return err
+	//	}
+	//
+	//	Proxy.SetDownstreamProxy(u)
+	//}
 
 	parts := strings.Split(req.URL.Path, ".")
 	if len(parts) > 0 {

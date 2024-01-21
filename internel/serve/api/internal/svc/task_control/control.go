@@ -103,7 +103,6 @@ func (c *TaskControl) submit(fn particleFunc, params []any) {
 			if table.GetErrCount(d.key) >= tcConfig.TaskErrorMaxCount {
 				_ = tasKModel.UpdateStatus(uint(taskId), model.StatusError)
 				logx.Error(keyPart[1], "任务失败")
-				return
 			} else {
 				logx.Errorw(
 					"error message",
@@ -113,8 +112,8 @@ func (c *TaskControl) submit(fn particleFunc, params []any) {
 				)
 				time.Sleep(time.Second * time.Duration(tcConfig.TaskErrorDuration))
 				c.submit(fn, []any{d}) // 重试
-				return
 			}
+			return
 		}
 
 		c.incDoneCount()
@@ -142,9 +141,10 @@ func (c *TaskControl) Run(tasks []model.Task) {
 		}
 
 		_ = tasKModel.UpdateStatus(m.ID, model.StatusRunning)
+		logx.Infof("=========> 任务开始：%s", w.task.Name)
 		c.submit(particle, []any{d})
 	}
 	c.wg.Wait()
 
-	logx.Info("所有任务已经结束")
+	logx.Info("所有任务已经结束 <=========")
 }

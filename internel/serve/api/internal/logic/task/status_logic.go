@@ -24,7 +24,10 @@ func NewStatusLogic(ctx context.Context, svcCtx *svc.ServiceContext) *StatusLogi
 }
 
 func (l *StatusLogic) Status(req *types.TaskStatusRequest) (resp *types.TaskStatusResponse, err error) {
-	resp = &types.TaskStatusResponse{Status: l.svcCtx.TaskControl.GetStatus()}
+	resp = &types.TaskStatusResponse{
+		Status:   l.svcCtx.TaskControl.GetStatus(),
+		WebProxy: l.svcCtx.Config.WebProxy,
+	}
 
 	return
 }

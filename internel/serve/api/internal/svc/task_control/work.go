@@ -127,7 +127,7 @@ func (w work) getM3u8(params []interface{}) error {
 	for _, segment := range segments {
 		playbackDuration += segment.Duration
 	}
-	logx.Infof("%s 该电影时长 %s \n", w.task.Name, m3u8.CalculationTime(playbackDuration))
+	logx.Infof("%v 该电影时长 %v \n", w.task.Name, m3u8.CalculationTime(playbackDuration))
 
 	concurrency := tcConfig.ConcurrencyM3u8
 	if uint(len(segments))/(concurrency*concurrency) > concurrency {
@@ -160,7 +160,7 @@ func (w work) getM3u8(params []interface{}) error {
 		)
 
 		if crypto, exist := table.CryptoVideoTable.Get(d.key); exist {
-			// 加密的视频
+			// 编码过的视频
 			tf := func(params []any) error {
 				buf := bytes.NewBuffer(nil)
 				if err := dChild.get(tcConfig.Client, d.req, buf); err != nil {
@@ -185,17 +185,28 @@ func (w work) getM3u8(params []interface{}) error {
 			dChild.req = d.req
 			core.submit(tf, []any{dChild})
 		} else {
+			// 无编码
 			request, err := http.NewRequest(http.MethodGet, link.String(), nil)
 			if err != nil {
 				return err
 			}
 			request.Header = d.req.Header
 			dChild.req = request
-			core.submit(w.getVideo, []any{dChild})
+			tf := func(params []interface{}) error {
+				err := w.getVideo(params)
+				if err != nil {
+					return err
+				}
+
+				table.M3u8DownloadDataLen.Inc(w.task.Name)
+				return nil
+			}
+			core.submit(tf, []any{dChild})
 		}
 
 	}
 	core.wg.Wait()
+	logx.Infof("%s 任务完成 ！！！！！！！！", w.task.Name)
 
 	// 合并所有分片
 	if tcConfig.UseFfmpeg {

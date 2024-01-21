@@ -49,7 +49,8 @@ type TaskStatusRequest struct {
 }
 
 type TaskStatusResponse struct {
-	Status bool `json:"status"` // 执行状态
+	Status   bool   `json:"status"`    // 执行状态
+	WebProxy string `json:"web_proxy"` // 填写到浏览器代理的地址
 }
 
 type DbQueryList struct {

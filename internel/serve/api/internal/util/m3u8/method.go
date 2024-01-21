@@ -2,7 +2,6 @@ package m3u8
 
 import (
 	"bufio"
-	"dv/internel/serve/api/internal/util/table"
 	"fmt"
 	"io"
 	"os"
@@ -212,8 +211,8 @@ func MergeFiles(saveDir string) error {
 		return nil
 	})
 
-	fileSize, _ := table.M3u8DownloadDataLen.Get(dirName)
-	fmt.Println(size, fileSize)
+	//fileSize, _ := table.M3u8DownloadDataLen.Get(dirName)
+	//fmt.Println(size, fileSize)
 
 	return err
 }
