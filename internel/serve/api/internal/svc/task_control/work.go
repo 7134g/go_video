@@ -106,6 +106,8 @@ func (w work) getVideo(params []interface{}) error {
 	d.fileSize = info.Size()
 
 	defer func(file *os.File) {
+		info, _ := file.Stat()
+		table.DownloadDataLen.Inc(w.task.Name, uint(info.Size()))
 		_ = file.Close()
 	}(file)
 	if d.fileSize > 0 {
@@ -166,7 +168,7 @@ func (w work) getM3u8(params []interface{}) error {
 				if err := dChild.get(tcConfig.Client, d.req, buf); err != nil {
 					return err
 				}
-				table.M3u8DownloadDataLen.Set(d.key, uint(buf.Len()))
+				table.DownloadDataLen.Set(d.key, uint(buf.Len()))
 
 				data := aes.AESDecrypt(buf.Bytes(), crypto)
 				if data == nil {
@@ -198,7 +200,6 @@ func (w work) getM3u8(params []interface{}) error {
 					return err
 				}
 
-				table.M3u8DownloadDataLen.Inc(w.task.Name)
 				return nil
 			}
 			core.submit(tf, []any{dChild})

@@ -9,6 +9,7 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/threading"
 	"log"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -58,7 +59,7 @@ func (c *TaskControl) printDownloadProgress(name string, taskTotal uint) {
 		case <-c.printStop:
 			return
 		case <-ticker.C:
-			nowDownloadDataLen, exist := table.M3u8DownloadDataLen.Get(name)
+			nowDownloadDataLen, exist := table.DownloadDataLen.Get(name)
 			if !exist {
 				continue
 			}
@@ -68,7 +69,7 @@ func (c *TaskControl) printDownloadProgress(name string, taskTotal uint) {
 			log.Println(fmt.Sprintf("%s 下载进度(%d/%d) 速度：%.2f %s/s 完成度：%.2f ",
 				name,
 				c.doneCount, taskTotal,
-				speed, unit,
+				speed/3, unit,
 				float64(c.doneCount)/float64(taskTotal)*100,
 			) + "%")
 			lastDownloadTimeSince = nowDownloadDataLen
@@ -128,6 +129,7 @@ func (c *TaskControl) submit(fn particleFunc, params []any) {
 
 func (c *TaskControl) Run(tasks []model.Task) {
 	logx.Info("running ......")
+	logx.Info(filepath.Abs(tcConfig.SaveDir))
 	defer c.Stop()
 	c.start()
 

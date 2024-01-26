@@ -131,7 +131,7 @@ func (d *download) get(client *http.Client, req *http.Request, write io.Writer) 
 		return errors.New(fmt.Sprintf("%d %s", resp.StatusCode, resp.Status))
 	}
 
-	if resp.ContentLength <= 0 {
+	if resp.ContentLength == 0 {
 		return errors.New(fmt.Sprintf("%s 跳过数据内容大于等于文件大小，因此不下载\n", d.fileName))
 	}
 
