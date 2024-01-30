@@ -24,8 +24,12 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	task_control.InitTask(c)
 
 	taskModel := model.NewTaskModel(db.GetDB())
-	proxy.Address = c.WebProxy
-	_ = proxy.Martian(taskModel)
+	proxy.SetTaskDb(taskModel)
+	proxy.SetServeProxyAddress(c.WebProxy, "", "")
+	proxy.OpenCert()
+	if err := proxy.Martian(); err != nil {
+		panic(err)
+	}
 
 	return &ServiceContext{
 		Config:          c,
