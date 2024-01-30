@@ -1,64 +1,100 @@
 package proxy
 
-// 使用官方包 github.com/google/martian 实现拦截
 import (
 	"bytes"
 	"dv/internel/serve/api/internal/util/model"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/google/martian"
+	"github.com/google/martian/auth"
+	"github.com/google/martian/log"
+	"github.com/google/martian/mitm"
 	"github.com/google/martian/priority"
+	"github.com/google/martian/proxyauth"
 	"github.com/zeromicro/go-zero/core/logx"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
 
 var (
-	Proxy    *martian.Proxy
-	CertFlag bool
-	Address  = ":1080"
-	//UserName    string
-	//PassWord    string
-	//ProxyServer string
+	MonitorAddress = "127.0.0.1:10888" // 监听地址
+	taskDB         *model.TaskModel
 )
 
-func Martian(taskDB *model.TaskModel) error {
-	Proxy = martian.NewProxy()
-	group := priority.NewGroup()
+var (
+	httpMartian *martian.Proxy // 拦截器全局对象
+	certFlag    bool           // 开启自签证书验证
+)
 
-	//if UserName != "" {
-	//	a := proxyauth.NewModifier()
-	//	group.AddRequestModifier(a, 2)
-	//	group.AddResponseModifier(a, 2)
-	//}
+var (
+	serverProxyUrlParse *url.URL // 解析代理
 
-	s := &Skip{taskDB: taskDB}
-	group.AddRequestModifier(s, 1)
-	group.AddResponseModifier(s, 1)
+	serverProxyFlag     bool   // 启用代理
+	serverProxy         string // 服务代理地址
+	serverProxyUsername string // 用户名
+	serverProxyPassword string // 密码
+)
 
-	Proxy.SetRequestModifier(group)
-	Proxy.SetResponseModifier(group)
-	// 使用代理发请求时候装载证书
-	if CertFlag {
-		//fmt.Println("开启代理：", ProxyServer)
-		CertReload()
-		mc, err := GetMITMConfig()
+func init() {
+	log.SetLevel(log.Silent)
+}
+
+func OpenCert() {
+	certFlag = true
+	_ = LoadCert()
+}
+
+func SetServeProxyAddress(address, username, password string) {
+	serverProxyFlag = true
+	serverProxy = address
+	serverProxyUsername = username
+	serverProxyPassword = password
+}
+
+func SetTaskDb(taskDb *model.TaskModel) {
+	taskDB = taskDb
+}
+
+func Martian() error {
+	httpMartian = martian.NewProxy()
+	if certFlag {
+		mc, err := mitm.NewConfig(ca, private)
 		if err != nil {
 			return err
 		}
-		Proxy.SetMITM(mc)
+		httpMartian.SetMITM(mc)
 	}
 
-	//log.SetLevel(log.Silent)
-	listener, err := net.Listen("tcp", Address)
+	if serverProxyFlag {
+		u, err := url.Parse(serverProxy)
+		if err != nil {
+			return err
+		}
+		serverProxyUrlParse = u
+	}
+
+	group := priority.NewGroup()
+	xs := newSkip()
+	group.AddRequestModifier(xs, 10)
+	group.AddResponseModifier(xs, 10)
+	xa := newAuth(proxyauth.NewModifier())
+	group.AddRequestModifier(xa, 12)
+	group.AddResponseModifier(xa, 12)
+	httpMartian.SetRequestModifier(group)
+	httpMartian.SetResponseModifier(group)
+
+	fmt.Printf("listen %s, user proxy %s \n", MonitorAddress, serverProxy)
+	listener, err := net.Listen("tcp", MonitorAddress)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(listener.Addr().String())
-	err = Proxy.Serve(listener)
+	err = httpMartian.Serve(listener)
 	if err != nil {
 		return err
 	}
@@ -66,59 +102,86 @@ func Martian(taskDB *model.TaskModel) error {
 	return nil
 }
 
-type Skip struct {
-	taskDB *model.TaskModel
+type skip struct {
 }
 
-func (r *Skip) ModifyRequest(req *http.Request) error {
-	//if ProxyServer != ""{
-	//	u, err := url.Parse(ProxyServer)
-	//	if err != nil {
-	//		return err
-	//	}
-	//
-	//	Proxy.SetDownstreamProxy(u)
-	//}
+func newSkip() *skip {
+	return &skip{}
+}
 
+func (r *skip) ModifyRequest(req *http.Request) error {
+	//fmt.Println(req.Method, req.URL.String())
 	parts := strings.Split(req.URL.Path, ".")
 	if len(parts) > 0 {
-		var data string
+		var header string
 		ext := parts[len(parts)-1]
 		switch ext {
 		case model.VideoTypeMp4, model.VideoTypeM3u8:
-			v, _ := json.Marshal(req)
-			data = string(v)
+			v, _ := json.Marshal(req.Header)
+			header = string(v)
 		default:
 			return nil
 		}
+		//fmt.Println(req.Method, req.URL.String())
 
-		findTask, _ := r.taskDB.Exist(data)
+		findTask, _ := taskDB.Exist(req.URL.String())
 		if findTask == nil {
 			t := model.Task{
-				Name:      fmt.Sprintf("%d", time.Now().UnixMilli()),
-				VideoType: ext,
-				Type:      model.TypeProxy,
-				Data:      data,
+				Name:       fmt.Sprintf("%d", time.Now().UnixMilli()),
+				VideoType:  ext,
+				Type:       model.TypeProxy,
+				Data:       req.URL.String(),
+				HeaderJson: header,
 			}
-			if err := r.taskDB.Insert(&t); err != nil {
+			if err := taskDB.Insert(&t); err != nil {
 				logx.Error(err)
 			}
 		}
 
 	}
 
-	//ctx := martian.NewContext(req)
-	//authCTX := auth.FromContext(ctx)
-	//if authCTX.ID() != fmt.Sprintf("%s:%s", UserName, PassWord) {
-	//	authCTX.SetError(errors.New("auth error"))
-	//	ctx.SkipRoundTrip()
-	//}
+	return nil
+}
+
+func (r *skip) ModifyResponse(res *http.Response) error {
+	return nil
+}
+
+type xauth struct {
+	pAuth *proxyauth.Modifier
+}
+
+func newAuth(pAuth *proxyauth.Modifier) *xauth {
+	return &xauth{pAuth: pAuth}
+}
+
+func (r *xauth) ModifyRequest(req *http.Request) error {
+	if serverProxy == "" {
+		return nil
+	}
+
+	httpMartian.SetDownstreamProxy(serverProxyUrlParse)
+
+	if serverProxyUsername != "" {
+		un := base64.StdEncoding.EncodeToString([]byte(serverProxyUsername))
+		pw := base64.StdEncoding.EncodeToString([]byte(serverProxyPassword))
+		//req.Header.Set("Proxy-Authorization", fmt.Sprintf("Basic %s:%s", un, pw))
+		ctx := martian.NewContext(req)
+		authCTX := auth.FromContext(ctx)
+		if authCTX.ID() != fmt.Sprintf("%s:%s", un, pw) {
+			authCTX.SetError(errors.New("auth error"))
+			ctx.SkipRoundTrip()
+		}
+	}
 
 	return nil
 }
 
-func (r *Skip) ModifyResponse(_ *http.Response) error {
-	return nil
+func (r *xauth) ModifyResponse(res *http.Response) error {
+	if serverProxy == "" {
+		return nil
+	}
+	return r.pAuth.ModifyResponse(res)
 }
 
 // ExtractRequestToString 提取请求包

@@ -10,3 +10,7 @@ _m3u8/
 build
 url.txt
 
+
+internel/serve/api/internal/util/proxy/mitm.crt
+internel/serve/api/internal/util/proxy/pri.pem
+
