@@ -2,6 +2,7 @@ package task
 
 import (
 	"context"
+	"github.com/jinzhu/copier"
 
 	"dv/internel/serve/api/internal/svc"
 	"dv/internel/serve/api/internal/types"
@@ -35,9 +36,15 @@ func (l *ListLogic) List(req *types.TaskListRequest) (resp *types.TaskListRespon
 		return nil, err
 	}
 
-	resp = &types.TaskListResponse{}
-	resp.List = list
-	resp.Total = total
+	resp = &types.TaskListResponse{
+		Total: total,
+		List:  nil,
+	}
+	for _, task := range list {
+		var data types.TaskInfo
+		_ = copier.Copy(&data, &task)
+		resp.List = append(resp.List, data)
+	}
 
 	return
 }

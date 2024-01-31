@@ -11,12 +11,24 @@ type TaskCreateRequest struct {
 type TaskCreateResponse struct {
 }
 
+type TaskInfo struct {
+	ID          uint   `json:"id"`
+	Name        string `json:"name"`         // 任务名字
+	VideoType   string `json:"video_type"`   // 视频类型
+	Type        string `json:"type"`         // 任务类型
+	Data        string `json:"data"`         // url 或者 curl
+	Status      uint   `json:"status"`       // 执行状态
+	NowProgress uint   `json:"now_progress"` // 现在进度
+	EndProgress uint   `json:"end_progress"` // 结束进度
+}
+
 type TaskListRequest struct {
 	DbQueryList
 }
 
 type TaskListResponse struct {
-	DbQueryListResponse
+	Total int64      `json:"total"`
+	List  []TaskInfo `json:"list"`
 }
 
 type TaskUpdateRequest struct {
