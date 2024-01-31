@@ -72,7 +72,6 @@ export default {
 <style scoped>
 .layout-container-demo .el-header {
   height: 100px;
-  text-align: center;
   font-size: 15px;
   position: relative;
   background-color: var(--el-color-primary-light-7);

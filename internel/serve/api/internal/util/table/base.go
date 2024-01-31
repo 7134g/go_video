@@ -31,15 +31,15 @@ func (m *cmpMap[D]) Get(key string) (D, bool) {
 	return value, exist
 }
 
-func (m *cmpMap[D]) Inc(key string) {
+func (m *cmpMap[D]) Inc(key string, count D) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
 	value, exist := m.body[key]
 	if exist {
-		m.body[key] = 1 + value
+		m.body[key] = count + value
 	} else {
-		m.body[key] = 1
+		m.body[key] = count
 	}
 }
 

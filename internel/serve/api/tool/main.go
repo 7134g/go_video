@@ -19,7 +19,7 @@ import (
 var (
 	configFile = flag.String("f", "etc/task_serve.yaml", "the config file")
 	taskFile   = flag.String("t", "url.txt", "默认：url.txt文件")
-	curlFlag   = flag.Bool("t", false, "curl 格式")
+	curlFlag   = flag.Bool("c", false, "curl 格式")
 )
 
 func main() {

@@ -1,3 +1,4 @@
+#!/bin/bash
 for loop in "build" "build/etc"
 do
     if [ -d "$loop" ]; then
