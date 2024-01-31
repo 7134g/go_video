@@ -14,8 +14,12 @@ var CryptoVideoTable = sliceMap[[]byte]{
 	body: make(map[string][]byte),
 }
 
-// TitleData 标题
-var TitleData = cmpMap[string]{
+var ProxyCatchUrl = cmpMap[uint]{
+	lock: sync.RWMutex{},
+	body: make(map[string]uint),
+}
+
+var ProxyCatchHtml = cmpMap[string]{
 	lock: sync.RWMutex{},
 	body: make(map[string]string),
 }

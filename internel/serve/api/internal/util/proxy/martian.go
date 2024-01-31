@@ -118,7 +118,10 @@ func newSkip() *skip {
 }
 
 func (r *skip) ModifyRequest(req *http.Request) error {
-	//fmt.Println(req.Method, req.URL.String())
+	logx.Debugw(
+		"url message",
+		logx.Field("method", req.Method),
+		logx.Field("url", req.URL.String()))
 	req.Header.Del("Accept-Encoding")
 	parts := strings.Split(req.URL.Path, ".")
 	if len(parts) > 0 {
@@ -131,21 +134,7 @@ func (r *skip) ModifyRequest(req *http.Request) error {
 		default:
 			return nil
 		}
-		//var name string
-		//switch {
-		//case req.Header.Get("Origin") != "":
-		//	key, _ := getUrlHost(req.Header.Get("Origin"))
-		//	value, exist := table.TitleData.Get(key)
-		//	if exist {
-		//		name = value
-		//	}
-		//case req.Header.Get("Referer") != "":
-		//	key, _ := getUrlHost(req.Header.Get("Referer"))
-		//	value, exist := table.TitleData.Get(key)
-		//	if exist {
-		//		name = value
-		//	}
-		//}
+
 		findTask, _ := taskDB.Exist(req.URL.String())
 		if findTask == nil {
 			t := model.Task{
@@ -158,7 +147,7 @@ func (r *skip) ModifyRequest(req *http.Request) error {
 			if err := taskDB.Insert(&t); err != nil {
 				logx.Error(err)
 			}
-
+			table.ProxyCatchUrl.Set(req.URL.String(), t.ID)
 		}
 
 	}
@@ -167,6 +156,9 @@ func (r *skip) ModifyRequest(req *http.Request) error {
 }
 
 func (r *skip) ModifyResponse(res *http.Response) error {
+	if !strings.HasSuffix(res.Request.URL.String(), ".html") {
+		return nil
+	}
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		return err
@@ -175,19 +167,7 @@ func (r *skip) ModifyResponse(res *http.Response) error {
 		return nil
 	}
 
-	buf := bytes.NewBuffer(data)
-	logx.Debugw(
-		"url message",
-		logx.Field("method", res.Request.Method),
-		logx.Field("url", res.Request.URL.String()))
-	title, err := ParseHtmlTitle(buf)
-	if err != nil {
-		logx.Error(err)
-	}
-	if title != "" {
-		table.TitleData.Set(res.Request.URL.Host, title)
-	}
-
+	table.ProxyCatchHtml.Set(res.Request.URL.String(), bytes.NewBuffer(data).String())
 	res.Body = io.NopCloser(bytes.NewBuffer(data))
 	return nil
 }

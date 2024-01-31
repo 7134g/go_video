@@ -1,13 +1,12 @@
 package table
 
 import (
+	"cmp"
 	"sync"
 )
 
 type dataType interface {
-	~int | ~int8 | ~int16 | ~int32 | ~int64 |
-		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr |
-		~float32 | ~float64 | string
+	cmp.Ordered
 }
 
 type cmpMap[D dataType] struct {
@@ -41,6 +40,12 @@ func (m *cmpMap[D]) Inc(key string, count D) {
 	} else {
 		m.body[key] = count
 	}
+}
+
+func (m *cmpMap[D]) Del(key string) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+	delete(m.body, key)
 }
 
 type sliceType interface {
