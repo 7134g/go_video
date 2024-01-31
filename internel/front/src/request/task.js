@@ -103,6 +103,8 @@ function GetTaskList(dataPage) {
                          type:       res.data.list[index].type,
                          data:       res.data.list[index].data,
                          status:     task_status,
+                        now_progress: res.data.list[index].now_progress,
+                        end_progress: res.data.list[index].end_progress,
                     })
                 }
                 result.total = res.data.total

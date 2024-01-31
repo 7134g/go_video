@@ -10,14 +10,19 @@ import formData from "@/components/formData.vue";
 
 <template>
   <div v-if="showDataList" >
-    <el-table :data="tableData" style="width: 100%" height="441">
+    <el-table :data="tableData" style="width: 100%" height="100%">
       <el-table-column type="index" label="序号" width="80" />
 <!--      <el-table-column fixed prop="id" label="任务号" width="80" />-->
-      <el-table-column prop="name" label="任务名称" width="150" />
+      <el-table-column prop="name" label="任务名称" width="200" />
       <el-table-column prop="video_type" label="视频类型" width="80" />
       <el-table-column prop="type" label="任务类型" width="80" />
       <el-table-column prop="status" label="任务状态" width="80" />
-      <el-table-column prop="data" show-overflow-tooltip label="任务数据" width="800" />
+      <el-table-column label="任务进度" width="100">
+        <template #default="scope">
+          {{ scope.row.now_progress }}/{{ scope.row.end_progress }}
+        </template>
+      </el-table-column>
+      <el-table-column prop="data" show-overflow-tooltip label="任务数据" width="200" />
       <el-table-column fixed="right" label="操作" width="180">
         <template #default="{ row }">
           <el-button link type="primary" size="large" @click="openCard(row.data)">查看数据</el-button>
@@ -75,9 +80,9 @@ export default {
       showDataForm: false,
 
 
-      currentPage: 1,
-      currentSize: 10,
-      total: 10,
+      currentPage: 0,
+      currentSize: 0,
+      total: 0,
       // tableData: [{
       //   "id": 1,
       //   "name": "test1",
@@ -162,6 +167,9 @@ export default {
 
   },
   mounted() {
+    let dp = useCounterStore().getDataPage()
+    this.currentSize = dp.size
+    this.currentPage = dp.page
     // 在其他方法或是生命周期中也可以调用方法
     this.getTables(useCounterStore().getDataPage())
   }

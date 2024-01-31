@@ -36,7 +36,7 @@ export const useCounterStore = defineStore('counter', {
           video_type: null,
         },
         page: 1,
-        size: 10,
+        size: 20,
       },
     }
   },
