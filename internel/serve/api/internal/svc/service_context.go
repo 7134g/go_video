@@ -7,6 +7,7 @@ import (
 	"dv/internel/serve/api/internal/svc/task_control"
 	"dv/internel/serve/api/internal/util/model"
 	"dv/internel/serve/api/internal/util/proxy"
+	"github.com/zeromicro/go-zero/core/threading"
 	"github.com/zeromicro/go-zero/rest"
 )
 
@@ -24,12 +25,15 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	task_control.InitTask(c)
 
 	taskModel := model.NewTaskModel(db.GetDB())
-	proxy.SetTaskDb(taskModel)
-	proxy.SetServeProxyAddress(c.WebProxy, "", "")
-	proxy.OpenCert()
-	if err := proxy.Martian(); err != nil {
-		panic(err)
-	}
+	threading.GoSafe(func() {
+		proxy.SetTaskDb(taskModel)
+		proxy.SetServeProxyAddress(c.Proxy, "", "")
+		proxy.OpenCert()
+		proxy.SetMartianAddress(c.WebProxy)
+		if err := proxy.Martian(); err != nil {
+			panic(err)
+		}
+	})
 
 	return &ServiceContext{
 		Config:          c,

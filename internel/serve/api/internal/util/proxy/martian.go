@@ -1,7 +1,6 @@
 package proxy
 
 import (
-	"bytes"
 	"dv/internel/serve/api/internal/util/model"
 	"encoding/base64"
 	"encoding/json"
@@ -22,7 +21,7 @@ import (
 )
 
 var (
-	MonitorAddress = "127.0.0.1:10888" // 监听地址
+	monitorAddress = "127.0.0.1:10888" // 监听地址
 	taskDB         *model.TaskModel
 )
 
@@ -46,7 +45,9 @@ func init() {
 
 func OpenCert() {
 	certFlag = true
-	_ = LoadCert()
+	if err := LoadCert(); err != nil {
+		panic(err)
+	}
 }
 
 func SetServeProxyAddress(address, username, password string) {
@@ -58,6 +59,10 @@ func SetServeProxyAddress(address, username, password string) {
 
 func SetTaskDb(taskDb *model.TaskModel) {
 	taskDB = taskDb
+}
+
+func SetMartianAddress(address string) {
+	monitorAddress = address
 }
 
 func Martian() error {
@@ -88,8 +93,8 @@ func Martian() error {
 	httpMartian.SetRequestModifier(group)
 	httpMartian.SetResponseModifier(group)
 
-	fmt.Printf("listen %s, user proxy %s \n", MonitorAddress, serverProxy)
-	listener, err := net.Listen("tcp", MonitorAddress)
+	fmt.Printf("listen %s, user proxy %s \n", monitorAddress, serverProxy)
+	listener, err := net.Listen("tcp", monitorAddress)
 	if err != nil {
 		return err
 	}
@@ -135,7 +140,10 @@ func (r *skip) ModifyRequest(req *http.Request) error {
 			}
 			if err := taskDB.Insert(&t); err != nil {
 				logx.Error(err)
+			} else {
+
 			}
+
 		}
 
 	}
@@ -144,6 +152,32 @@ func (r *skip) ModifyRequest(req *http.Request) error {
 }
 
 func (r *skip) ModifyResponse(res *http.Response) error {
+	//data, err := io.ReadAll(res.Body)
+	//if err != nil {
+	//	return err
+	//}
+	//if len(data) == 0 {
+	//	return nil
+	//}
+	//
+	//logx.Debugw(
+	//	"url message",
+	//	logx.Field("method", res.Request.Method),
+	//	logx.Field("url", res.Request.URL.String()))
+	//title, err := ParseHtmlTitle(bytes.NewBuffer(data))
+	//if err != nil {
+	//	logx.Error(err)
+	//}
+	//if title != "" {
+	//	idVal := res.Request.Context().Value("taskId")
+	//	if idVal != nil {
+	//		if err := taskDB.Update(&model.Task{ID: idVal.(uint), Name: title}); err != nil {
+	//			logx.Error(err)
+	//		}
+	//	}
+	//}
+	//
+	//res.Body = io.NopCloser(bytes.NewBuffer(data))
 	return nil
 }
 
@@ -182,16 +216,4 @@ func (r *xauth) ModifyResponse(res *http.Response) error {
 		return nil
 	}
 	return r.pAuth.ModifyResponse(res)
-}
-
-// ExtractRequestToString 提取请求包
-func ExtractRequestToString(res *http.Request) string {
-	buf := bytes.NewBuffer([]byte{})
-	defer buf.Reset()
-	err := res.Write(buf)
-	if err != nil {
-		return ""
-	}
-
-	return buf.String()
 }
