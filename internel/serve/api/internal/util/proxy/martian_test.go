@@ -4,6 +4,7 @@ import (
 	"dv/internel/serve/api/internal/db"
 	"dv/internel/serve/api/internal/util/model"
 	"testing"
+	"time"
 )
 
 func TestMartian(t *testing.T) {
@@ -15,4 +16,11 @@ func TestMartian(t *testing.T) {
 		t.Fatal(err)
 	}
 
+}
+
+func TestGet(t *testing.T) {
+	for i := 0; i < 10; i++ {
+		t.Log(getNumber())
+		time.Sleep(time.Second * 3)
+	}
 }

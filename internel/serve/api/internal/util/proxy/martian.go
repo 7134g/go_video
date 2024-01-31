@@ -1,7 +1,9 @@
 package proxy
 
 import (
+	"bytes"
 	"dv/internel/serve/api/internal/util/model"
+	"dv/internel/serve/api/internal/util/table"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -13,6 +15,7 @@ import (
 	"github.com/google/martian/priority"
 	"github.com/google/martian/proxyauth"
 	"github.com/zeromicro/go-zero/core/logx"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -116,6 +119,7 @@ func newSkip() *skip {
 
 func (r *skip) ModifyRequest(req *http.Request) error {
 	//fmt.Println(req.Method, req.URL.String())
+	req.Header.Del("Accept-Encoding")
 	parts := strings.Split(req.URL.Path, ".")
 	if len(parts) > 0 {
 		var header string
@@ -127,12 +131,25 @@ func (r *skip) ModifyRequest(req *http.Request) error {
 		default:
 			return nil
 		}
-		//fmt.Println(req.Method, req.URL.String())
-
+		//var name string
+		//switch {
+		//case req.Header.Get("Origin") != "":
+		//	key, _ := getUrlHost(req.Header.Get("Origin"))
+		//	value, exist := table.TitleData.Get(key)
+		//	if exist {
+		//		name = value
+		//	}
+		//case req.Header.Get("Referer") != "":
+		//	key, _ := getUrlHost(req.Header.Get("Referer"))
+		//	value, exist := table.TitleData.Get(key)
+		//	if exist {
+		//		name = value
+		//	}
+		//}
 		findTask, _ := taskDB.Exist(req.URL.String())
 		if findTask == nil {
 			t := model.Task{
-				Name:       fmt.Sprintf("%d", time.Now().UnixMilli()),
+				Name:       fmt.Sprintf("%s", time.Now().Format("2006_01_02_15_04_05")),
 				VideoType:  ext,
 				Type:       model.TypeProxy,
 				Data:       req.URL.String(),
@@ -140,8 +157,6 @@ func (r *skip) ModifyRequest(req *http.Request) error {
 			}
 			if err := taskDB.Insert(&t); err != nil {
 				logx.Error(err)
-			} else {
-
 			}
 
 		}
@@ -152,32 +167,28 @@ func (r *skip) ModifyRequest(req *http.Request) error {
 }
 
 func (r *skip) ModifyResponse(res *http.Response) error {
-	//data, err := io.ReadAll(res.Body)
-	//if err != nil {
-	//	return err
-	//}
-	//if len(data) == 0 {
-	//	return nil
-	//}
-	//
-	//logx.Debugw(
-	//	"url message",
-	//	logx.Field("method", res.Request.Method),
-	//	logx.Field("url", res.Request.URL.String()))
-	//title, err := ParseHtmlTitle(bytes.NewBuffer(data))
-	//if err != nil {
-	//	logx.Error(err)
-	//}
-	//if title != "" {
-	//	idVal := res.Request.Context().Value("taskId")
-	//	if idVal != nil {
-	//		if err := taskDB.Update(&model.Task{ID: idVal.(uint), Name: title}); err != nil {
-	//			logx.Error(err)
-	//		}
-	//	}
-	//}
-	//
-	//res.Body = io.NopCloser(bytes.NewBuffer(data))
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+	if len(data) == 0 {
+		return nil
+	}
+
+	buf := bytes.NewBuffer(data)
+	logx.Debugw(
+		"url message",
+		logx.Field("method", res.Request.Method),
+		logx.Field("url", res.Request.URL.String()))
+	title, err := ParseHtmlTitle(buf)
+	if err != nil {
+		logx.Error(err)
+	}
+	if title != "" {
+		table.TitleData.Set(res.Request.URL.Host, title)
+	}
+
+	res.Body = io.NopCloser(bytes.NewBuffer(data))
 	return nil
 }
 
@@ -216,4 +227,18 @@ func (r *xauth) ModifyResponse(res *http.Response) error {
 		return nil
 	}
 	return r.pAuth.ModifyResponse(res)
+}
+
+func getNumber() int64 {
+	currentTime := time.Now().Unix()
+	return currentTime - currentTime%10
+}
+
+func getUrlHost(u string) (string, error) {
+	_url, err := url.Parse(u)
+	if err != nil {
+		return "", err
+	}
+
+	return _url.Host, nil
 }
