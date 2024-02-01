@@ -103,7 +103,7 @@ function GetTaskList(dataPage) {
                          type:       res.data.list[index].type,
                          data:       res.data.list[index].data,
                          status:     task_status,
-                         score:      res.data.list[index].score,
+                         score:      res.data.list[index].score / 100,
                     })
                 }
                 result.total = res.data.total
