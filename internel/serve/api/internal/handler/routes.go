@@ -45,6 +45,21 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 					Path:    "/status",
 					Handler: task.StatusHandler(serverCtx),
 				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/config",
+					Handler: task.GetConfigHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/config/set",
+					Handler: task.SetConfigHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/log",
+					Handler: task.ShowLogHandler(serverCtx),
+				},
 			}...,
 		),
 		rest.WithPrefix("/task"),

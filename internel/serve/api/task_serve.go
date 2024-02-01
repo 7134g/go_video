@@ -1,12 +1,11 @@
 package main
 
 import (
-	"flag"
-	"fmt"
-
 	"dv/internel/serve/api/internal/config"
 	"dv/internel/serve/api/internal/handler"
 	"dv/internel/serve/api/internal/svc"
+	"flag"
+	"fmt"
 
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/rest"

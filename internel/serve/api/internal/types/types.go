@@ -64,6 +64,41 @@ type TaskStatusResponse struct {
 	WebProxy string `json:"web_proxy"` // 填写到浏览器代理的地址
 }
 
+type GetConfigRequest struct {
+}
+
+type GetConfigResponse struct {
+	WebProxy          string `json:"web_proxy"`            // web监听
+	Concurrency       uint   `json:"concurrency"`          // 并发数
+	ConcurrencyM3u8   uint   `json:"concurrency_m_3_u_8"`  // m3u8 片段并发大小
+	SaveDir           string `json:"save_dir"`             // 存储位置
+	TaskErrorMaxCount uint   `json:"task_error_max_count"` // 任务连续最大错误次数
+	TaskErrorDuration uint   `json:"task_error_duration"`  // 错误时候休眠多久后重试(秒)
+	UseFfmpeg         bool   `json:"use_ffmpeg"`           // 使用ffmpeg进行合并分片
+	FfmpegPath        string `json:"ffmpeg_path"`          // ffmpeg程序所在地址
+}
+
+type SetConfigRequest struct {
+	WebProxy          string `json:"web_proxy"`            // web监听
+	Concurrency       uint   `json:"concurrency"`          // 并发数
+	ConcurrencyM3u8   uint   `json:"concurrency_m_3_u_8"`  // m3u8 片段并发大小
+	SaveDir           string `json:"save_dir"`             // 存储位置
+	TaskErrorMaxCount uint   `json:"task_error_max_count"` // 任务连续最大错误次数
+	TaskErrorDuration uint   `json:"task_error_duration"`  // 错误时候休眠多久后重试(秒)
+	UseFfmpeg         bool   `json:"use_ffmpeg"`           // 使用ffmpeg进行合并分片
+	FfmpegPath        string `json:"ffmpeg_path"`          // ffmpeg程序所在地址
+}
+
+type SetConfigResponse struct {
+}
+
+type ShowLogRequest struct {
+}
+
+type ShowLogResponse struct {
+	Text string `json:"text"`
+}
+
 type DbQueryList struct {
 	Page     int                    `json:"page,range=[0:),default=1,optional"`
 	Size     int                    `json:"size,range=(:500],default=10,optional"`

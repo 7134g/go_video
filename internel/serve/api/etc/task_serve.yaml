@@ -1,6 +1,7 @@
 Name: task_serve
 Host: 127.0.0.1
 Port: 8888
+Mode: dev
 
 Log:
   Mode: console

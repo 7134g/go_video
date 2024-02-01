@@ -33,6 +33,15 @@ service task_serve {
 
 	@handler Status
 	get /status (TaskStatusRequest) returns (TaskStatusResponse)
+
+	@handler GetConfig
+	get /config (GetConfigRequest) returns (GetConfigResponse)
+
+	@handler SetConfig
+	post /config/set (SetConfigRequest) returns (SetConfigResponse)
+
+	@handler ShowLog
+	get /log (ShowLogRequest) returns (ShowLogResponse)
 }
 
 //type Task {
@@ -110,5 +119,45 @@ type (
 	TaskStatusResponse {
 		Status   bool   `json:"status"`    // 执行状态
 		WebProxy string `json:"web_proxy"` // 填写到浏览器代理的地址
+	}
+)
+
+type (
+	GetConfigRequest {
+	}
+	GetConfigResponse {
+		WebProxy string `json:"web_proxy"` // web监听
+
+		Concurrency       uint   `json:"concurrency"`          // 并发数
+		ConcurrencyM3u8   uint   `json:"concurrency_m_3_u_8"`  // m3u8 片段并发大小
+		SaveDir           string `json:"save_dir"`             // 存储位置
+		TaskErrorMaxCount uint   `json:"task_error_max_count"` // 任务连续最大错误次数
+		TaskErrorDuration uint   `json:"task_error_duration"`  // 错误时候休眠多久后重试(秒)
+		UseFfmpeg         bool   `json:"use_ffmpeg"`           // 使用ffmpeg进行合并分片
+		FfmpegPath        string `json:"ffmpeg_path"`          // ffmpeg程序所在地址
+	}
+)
+
+type (
+	SetConfigRequest {
+		WebProxy string `json:"web_proxy"` // web监听
+
+		Concurrency       uint   `json:"concurrency"`          // 并发数
+		ConcurrencyM3u8   uint   `json:"concurrency_m_3_u_8"`  // m3u8 片段并发大小
+		SaveDir           string `json:"save_dir"`             // 存储位置
+		TaskErrorMaxCount uint   `json:"task_error_max_count"` // 任务连续最大错误次数
+		TaskErrorDuration uint   `json:"task_error_duration"`  // 错误时候休眠多久后重试(秒)
+		UseFfmpeg         bool   `json:"use_ffmpeg"`           // 使用ffmpeg进行合并分片
+		FfmpegPath        string `json:"ffmpeg_path"`          // ffmpeg程序所在地址
+	}
+	SetConfigResponse {
+	}
+)
+
+type (
+	ShowLogRequest {
+	}
+	ShowLogResponse {
+		Text string `json:"text"`
 	}
 )

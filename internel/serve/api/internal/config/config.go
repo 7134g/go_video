@@ -12,8 +12,6 @@ type Config struct {
 	HttpConfig
 
 	TaskControlConfig
-
-	WebProxy string // web监听
 }
 
 type HttpConfig struct {
@@ -23,6 +21,8 @@ type HttpConfig struct {
 }
 
 type TaskControlConfig struct {
+	WebProxy string // web监听
+
 	Concurrency       uint   // 并发数
 	ConcurrencyM3u8   uint   // m3u8 片段并发大小
 	SaveDir           string // 存储位置

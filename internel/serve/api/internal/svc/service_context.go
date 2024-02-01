@@ -1,23 +1,26 @@
 package svc
 
 import (
+	"bytes"
 	"dv/internel/serve/api/internal/config"
 	"dv/internel/serve/api/internal/db"
 	"dv/internel/serve/api/internal/middleware"
 	"dv/internel/serve/api/internal/svc/task_control"
 	"dv/internel/serve/api/internal/util/model"
 	"dv/internel/serve/api/internal/util/proxy"
+	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/threading"
 	"github.com/zeromicro/go-zero/rest"
+	"io"
+	"os"
 )
 
 type ServiceContext struct {
 	Config          config.Config
 	AuthInterceptor rest.Middleware
-
-	TaskModel *model.TaskModel
-
-	TaskControl *task_control.TaskControl
+	TaskModel       *model.TaskModel
+	TaskControl     *task_control.TaskControl
+	LogData         *bytes.Buffer
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
@@ -39,10 +42,15 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		proxy.MatchInformation()
 	})
 
+	logData := bytes.NewBuffer(nil)
+	logWrite := logx.NewWriter(io.MultiWriter(os.Stdout, logData))
+	logx.SetWriter(logWrite)
+
 	return &ServiceContext{
 		Config:          c,
 		AuthInterceptor: middleware.NewAuthInterceptorMiddleware().Handle,
 		TaskModel:       taskModel,
 		TaskControl:     task_control.NewTaskControl(c.TaskControlConfig.Concurrency),
+		LogData:         logData,
 	}
 }
