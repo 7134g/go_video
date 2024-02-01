@@ -10,8 +10,6 @@ import (
 	"github.com/zeromicro/go-zero/core/threading"
 	"log"
 	"path/filepath"
-	"strconv"
-	"strings"
 	"time"
 )
 
@@ -47,8 +45,8 @@ func (c *TaskControl) incDoneCount() {
 	c.doneCount++
 }
 
-func (c *TaskControl) printDownloadProgress(name string, taskTotal uint) {
-	if name == "" {
+func (c *TaskControl) printDownloadProgress(t model.Task, taskTotal uint) {
+	if t.VideoType == model.VideoTypeMp4 {
 		return
 	}
 
@@ -59,18 +57,20 @@ func (c *TaskControl) printDownloadProgress(name string, taskTotal uint) {
 		case <-c.printStop:
 			return
 		case <-ticker.C:
-			nowDownloadDataLen, exist := table.DownloadDataLen.Get(name)
+			nowDownloadDataLen, exist := table.DownloadDataLen.Get(t.ID)
 			if !exist {
 				continue
 			}
 
 			downloadTimeSince := nowDownloadDataLen - lastDownloadTimeSince
 			speed, unit := calc.UnitReturn(float64(downloadTimeSince))
+			score := float64(c.doneCount) / float64(taskTotal) * 100
+			table.DownloadTaskScore.Set(t.ID, uint(score*100))
 			log.Println(fmt.Sprintf("%s 下载进度(%d/%d) 速度：%.2f %s/s 完成度：%.2f ",
-				name,
+				t.Name,
 				c.doneCount, taskTotal,
 				speed/3, unit,
-				float64(c.doneCount)/float64(taskTotal)*100,
+				score,
 			) + "%")
 			lastDownloadTimeSince = nowDownloadDataLen
 		}
@@ -96,19 +96,20 @@ func (c *TaskControl) submit(fn particleFunc, params []any) {
 			<-c.vacancy
 		}()
 
-		keyPart := strings.Split(d.key, "_")
-		taskId, _ := strconv.Atoi(keyPart[0])
+		//keyPart := strings.Split(d.key, "_")
+		//taskId, _ := strconv.Atoi(keyPart[0])
 
+		key := buildKey(d.t.ID, d.t.Name)
 		if err := fn([]any{d}); err != nil {
-			table.IncErrCount(d.key)
-			if table.GetErrCount(d.key) >= tcConfig.TaskErrorMaxCount {
-				_ = tasKModel.UpdateStatus(uint(taskId), model.StatusError)
-				logx.Error(keyPart[1], "任务失败")
+			table.IncErrCount(key)
+			if table.GetErrCount(key) >= tcConfig.TaskErrorMaxCount {
+				_ = tasKModel.UpdateStatus(d.t.ID, model.StatusError)
+				logx.Error(d.t.Name, "任务失败")
 			} else {
 				logx.Errorw(
 					"error message",
-					logx.Field("retry_count", table.GetErrCount(d.key)),
-					logx.Field("key", d.key),
+					logx.Field("retry_count", table.GetErrCount(key)),
+					logx.Field("key", key),
 					logx.Field("error", err),
 				)
 				time.Sleep(time.Second * time.Duration(tcConfig.TaskErrorDuration))
@@ -118,9 +119,9 @@ func (c *TaskControl) submit(fn particleFunc, params []any) {
 		}
 
 		c.incDoneCount()
-		if len(keyPart) <= 2 {
-			_ = tasKModel.UpdateStatus(uint(taskId), model.StatusSuccess)
-			logx.Info(d.key, " is done")
+		if d.t.VideoType == model.VideoTypeMp4 {
+			_ = tasKModel.UpdateStatus(d.t.ID, model.StatusSuccess)
+			logx.Info(d.t.Name, " is done")
 		}
 
 		return

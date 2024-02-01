@@ -59,27 +59,33 @@ func (w work) parseTask() (particleFunc, *download) {
 		}
 		request.Header = header
 	case model.TypeProxy:
-		if err := json.Unmarshal([]byte(w.task.Data), request); err != nil {
+		request, err = http.NewRequest(http.MethodGet, w.task.Data, nil)
+		if err != nil {
 			return fail(err), nil
 		}
+		var header http.Header
+		if err := json.Unmarshal([]byte(w.task.HeaderJson), &header); err != nil {
+			return fail(err), nil
+		}
+		if len(header) == 0 {
+			header = tcConfig.Headers
+		}
+		request.Header = header
 	default:
 		return fail(errors.New("type error")), nil
 
 	}
 
 	d := newDownload(
-		buildKey(w.task.ID, w.task.Name),
+		w.task,
 		tcConfig.SaveDir,
 		w.task.Name,
 	)
 	d.req = request
 	switch w.task.VideoType {
 	case model.VideoTypeMp4:
-		//d.fileName = fmt.Sprintf("%s.mp4", d.fileName)
-
 		return w.getVideo, d
 	case model.VideoTypeM3u8:
-		d.key = buildKey(w.task.ID, w.task.Name, "m3u8")
 		return w.getM3u8, d
 	default:
 		return fail(errors.New("video type error")), nil
@@ -91,7 +97,7 @@ func (w work) getVideo(params []interface{}) error {
 	d := params[0].(*download)
 	savePath := filepath.Join(d.fileDir, d.fileName)
 	var flag = os.O_RDWR | os.O_CREATE | os.O_APPEND
-	if len(strings.Split(d.key, "_")) > 2 {
+	if w.task.VideoType != model.VideoTypeMp4 {
 		flag = os.O_RDWR | os.O_CREATE | os.O_TRUNC
 	}
 
@@ -107,7 +113,7 @@ func (w work) getVideo(params []interface{}) error {
 
 	defer func(file *os.File) {
 		info, _ := file.Stat()
-		table.DownloadDataLen.Inc(w.task.Name, uint(info.Size()))
+		table.DownloadDataLen.Inc(w.task.ID, uint(info.Size()))
 		_ = file.Close()
 	}(file)
 	if d.fileSize > 0 {
@@ -139,7 +145,7 @@ func (w work) getM3u8(params []interface{}) error {
 	dir := filepath.Join(tcConfig.SaveDir, w.task.Name)
 	core := NewTaskControl(concurrency)
 	core.start()
-	go core.printDownloadProgress(w.task.Name, uint(len(segments)))
+	go core.printDownloadProgress(w.task, uint(len(segments)))
 	for index, segment := range segments {
 		link, err := url.Parse(d.req.URL.String())
 		if err != nil {
@@ -156,19 +162,19 @@ func (w work) getM3u8(params []interface{}) error {
 			fileName = fmt.Sprintf("%s.%s", fileName, pathPart[len(pathPart)-1])
 		}
 		dChild := newDownload(
-			buildKey(w.task.ID, fileName, "m3u8"),
+			w.task,
 			dir,
 			fileName,
 		)
 
-		if crypto, exist := table.CryptoVideoTable.Get(d.key); exist {
+		if crypto, exist := table.CryptoVideoTable.Get(w.task.ID); exist {
 			// 编码过的视频
 			tf := func(params []any) error {
 				buf := bytes.NewBuffer(nil)
 				if err := dChild.get(tcConfig.Client, d.req, buf); err != nil {
 					return err
 				}
-				table.DownloadDataLen.Set(d.key, uint(buf.Len()))
+				table.DownloadDataLen.Set(w.task.ID, uint(buf.Len()))
 
 				data := aes.AESDecrypt(buf.Bytes(), crypto)
 				if data == nil {

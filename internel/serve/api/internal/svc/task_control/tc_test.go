@@ -20,7 +20,7 @@ func TestNewTaskControl(t *testing.T) {
 			ProxyStatus: false,
 		},
 		TaskControlConfig: config.TaskControlConfig{
-			Concurrency:       5,
+			Concurrency:       2,
 			ConcurrencyM3u8:   10,
 			SaveDir:           "./download",
 			TaskErrorMaxCount: 20,

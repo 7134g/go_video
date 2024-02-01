@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"dv/internel/serve/api/internal/util/calc"
 	"dv/internel/serve/api/internal/util/m3u8"
+	"dv/internel/serve/api/internal/util/model"
 	"dv/internel/serve/api/internal/util/table"
 	"errors"
 	"fmt"
@@ -20,7 +21,7 @@ import (
 type download struct {
 	req *http.Request
 
-	key      string // 任务标识
+	t        model.Task
 	fileDir  string // 目录
 	fileName string // 文件名
 
@@ -29,10 +30,11 @@ type download struct {
 	stop          chan struct{} // 打印进度
 }
 
-func newDownload(key, fileDir, fileName string) *download {
+func newDownload(t model.Task, fileDir, fileName string) *download {
 	_ = os.MkdirAll(fileDir, 0700)
 	return &download{
-		key:      key,
+		t: t,
+
 		fileDir:  fileDir,
 		fileName: fmt.Sprintf("%s.mp4", fileName),
 		stop:     make(chan struct{}),
@@ -108,7 +110,7 @@ func (d *download) getM3u8File(client *http.Client, req *http.Request) ([]*m3u8.
 			return nil, err
 		}
 
-		table.CryptoVideoTable.Set(d.key, aesBuf.Bytes())
+		table.CryptoVideoTable.Set(d.t.ID, aesBuf.Bytes())
 		break
 	}
 
@@ -179,7 +181,8 @@ func (d *download) rw(read io.Reader, write io.Writer) error {
 }
 
 func (d *download) printDownloadMessage() {
-	if len(strings.Split(d.key, "_")) > 2 {
+	if d.t.VideoType != model.VideoTypeMp4 {
+		// 说明此时下的是m3u8这类分片视频
 		return
 	}
 	var now = time.Now()                                         // 记录耗时
@@ -197,6 +200,7 @@ func (d *download) printDownloadMessage() {
 			speed, unit := calc.UnitReturn(dataByTime)
 			msg = fmt.Sprintf("百分比 %.2f 速度 %.3f %s/s | %.3f GB", score, speed, unit, fileSize)
 			lastNowRS = nowRS
+			table.DownloadTaskScore.Set(d.t.ID, uint(score*100))
 			logx.Infof("%s %s\n", d.fileName, msg)
 		case <-d.stop:
 			averageSpeed := float64(d.fileSize) / time.Since(now).Seconds() // 本次每秒下载字节数
