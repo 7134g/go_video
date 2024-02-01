@@ -33,10 +33,10 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		if err := proxy.Martian(); err != nil {
 			panic(err)
 		}
-		// 处理 ProxyCatchUrl 和 ProxyCatchHtml 匹配
-		threading.GoSafe(func() {
-			proxy.MatchInformation()
-		})
+	})
+	// 处理 ProxyCatchUrl 和 ProxyCatchHtml 匹配
+	threading.GoSafe(func() {
+		proxy.MatchInformation()
 	})
 
 	return &ServiceContext{

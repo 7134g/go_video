@@ -107,7 +107,7 @@ func (c *TaskControl) submit(fn particleFunc, params []any) {
 				logx.Error(d.t.Name, "任务失败")
 			} else {
 				logx.Errorw(
-					"error message",
+					"control error message",
 					logx.Field("retry_count", table.GetErrCount(key)),
 					logx.Field("key", key),
 					logx.Field("error", err),
