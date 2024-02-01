@@ -2,10 +2,18 @@ package proxy
 
 import (
 	"bytes"
+	"dv/internel/serve/api/internal/util/model"
+	"dv/internel/serve/api/internal/util/table"
 	"errors"
+	"fmt"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/zeromicro/go-zero/core/logx"
 	"io"
 	"net/http"
+	"net/url"
+	"regexp"
+	"strings"
+	"time"
 )
 
 // 用于读出 response 再重新写入
@@ -64,4 +72,55 @@ func ExtractRequestToString(res *http.Request) string {
 	}
 
 	return buf.String()
+}
+
+var (
+	regUrl, _  = regexp.Compile(`([^\/]+)(\.m3u8|\.mp4)$`)
+	tickerTime = time.Second * 10
+)
+
+func MatchInformation() {
+	ticker := time.NewTicker(tickerTime)
+
+	for {
+
+		deleteKey := []string{}
+
+		select {
+		case <-ticker.C:
+			table.ProxyCatchUrl.Each(func(link string, taskId uint) {
+				// https://1257120875.vod2.myqcloud.com/0ef121cdvodtransgzp1257120875/3055695e5285890780828799271/v.f230.m3u8
+				u, err := url.Parse(link)
+				if err != nil {
+					return
+				}
+				var filename, name string
+				filename = regUrl.FindString(u.Path)
+				parts := strings.Split(filename, ".")
+				if len(parts) > 1 {
+					name = parts[0]
+				}
+
+				table.ProxyCatchHtml.Each(func(title string, html string) {
+					regKey, _ := regexp.Compile(fmt.Sprintf("(%s)|(%s)|(%s)", link, filename, name))
+					if regKey.MatchString(html) {
+						logx.Debugf("taskId %d change name %s", taskId, title)
+						if err := taskDB.Update(&model.Task{ID: taskId, Name: title}); err != nil {
+							logx.Error(err)
+						} else {
+							deleteKey = append(deleteKey, title, link)
+						}
+					}
+
+				})
+			})
+
+		}
+
+		for _, k := range deleteKey {
+			table.ProxyCatchUrl.Del(k)
+			table.ProxyCatchHtml.Del(k)
+		}
+
+	}
 }

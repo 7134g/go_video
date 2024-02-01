@@ -10,6 +10,7 @@ import (
 func TestMartian(t *testing.T) {
 	db.InitSqlite("test.sqlite")
 	taskDB = model.NewTaskModel(db.GetDB())
+	go MatchInformation()
 	SetServeProxyAddress("http://127.0.0.1:7890", "", "")
 	OpenCert()
 	if err := Martian(); err != nil {

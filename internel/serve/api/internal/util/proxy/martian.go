@@ -167,7 +167,10 @@ func (r *skip) ModifyResponse(res *http.Response) error {
 		return nil
 	}
 
-	table.ProxyCatchHtml.Set(res.Request.URL.String(), bytes.NewBuffer(data).String())
+	if title, _ := ParseHtmlTitle(bytes.NewBuffer(data)); title != "" {
+		table.ProxyCatchHtml.Set(title, bytes.NewBuffer(data).String())
+	}
+
 	res.Body = io.NopCloser(bytes.NewBuffer(data))
 	return nil
 }

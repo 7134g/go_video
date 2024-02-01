@@ -48,6 +48,16 @@ func (m *cmpMap[D]) Del(key string) {
 	delete(m.body, key)
 }
 
+func (m *cmpMap[D]) Each(f func(key string, value D)) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	for key, value := range m.body {
+		f(key, value)
+	}
+
+}
+
 type sliceType interface {
 	[]byte | []string | []int
 }
