@@ -88,13 +88,13 @@ func (c *TaskControl) submit(fn particleFunc, params []any) {
 
 	d := params[0].(*download)
 	go threading.GoSafe(func() {
-		if d == nil {
-			return
-		}
 		defer func() {
 			c.wg.Done()
 			<-c.vacancy
 		}()
+		if d == nil {
+			return
+		}
 
 		//keyPart := strings.Split(d.key, "_")
 		//taskId, _ := strconv.Atoi(keyPart[0])

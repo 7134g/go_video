@@ -213,6 +213,7 @@ func (w work) getM3u8(params []interface{}) error {
 
 	}
 	core.wg.Wait()
+	core.Stop()
 	logx.Infof("%s 任务完成 ！！！！！！！！", w.task.Name)
 
 	// 合并所有分片
