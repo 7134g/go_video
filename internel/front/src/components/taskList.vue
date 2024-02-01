@@ -19,7 +19,7 @@ import formData from "@/components/formData.vue";
       <el-table-column prop="status" label="任务状态" width="80" />
       <el-table-column label="任务进度" width="100">
         <template #default="scope">
-          {{ scope.row.now_progress }}/{{ scope.row.end_progress }}
+          {{ scope.row.score }}%
         </template>
       </el-table-column>
       <el-table-column prop="data" show-overflow-tooltip label="任务数据" width="200" />

@@ -81,7 +81,7 @@ function GetTaskList(dataPage) {
         request.post(listURL, body).then(
             res => {
                 for (const index in res.data.list) {
-                    var task_status ;
+                    let task_status;
                     switch (res.data.list[index].status) {
                         case 0:
                             task_status="未开始"
@@ -103,8 +103,7 @@ function GetTaskList(dataPage) {
                          type:       res.data.list[index].type,
                          data:       res.data.list[index].data,
                          status:     task_status,
-                        now_progress: res.data.list[index].now_progress,
-                        end_progress: res.data.list[index].end_progress,
+                         score:      res.data.list[index].score,
                     })
                 }
                 result.total = res.data.total
