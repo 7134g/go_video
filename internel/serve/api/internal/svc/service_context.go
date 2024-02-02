@@ -6,13 +6,16 @@ import (
 	"dv/internel/serve/api/internal/db"
 	"dv/internel/serve/api/internal/middleware"
 	"dv/internel/serve/api/internal/svc/task_control"
+	"dv/internel/serve/api/internal/util/files"
 	"dv/internel/serve/api/internal/util/model"
 	"dv/internel/serve/api/internal/util/proxy"
+	"fmt"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/threading"
 	"github.com/zeromicro/go-zero/rest"
 	"io"
 	"os"
+	"time"
 )
 
 type ServiceContext struct {
@@ -24,10 +27,11 @@ type ServiceContext struct {
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
-	db.InitSqlite(c.DB)
+	taskModel := model.NewTaskModel(db.InitSqlite(c.DB))
+
 	task_control.InitTask(c)
 
-	taskModel := model.NewTaskModel(db.GetDB())
+	// 开启被动代理
 	threading.GoSafe(func() {
 		proxy.SetTaskDb(taskModel)
 		proxy.SetServeProxyAddress(c.Proxy, "", "")
@@ -42,8 +46,13 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		proxy.MatchInformation()
 	})
 
+	// 设置日志
+	f, err := files.GetFile(fmt.Sprintf("./log/%s.log", time.Now().Format(time.DateOnly)))
+	if err != nil {
+		panic(err)
+	}
 	logData := bytes.NewBuffer(nil)
-	logWrite := logx.NewWriter(io.MultiWriter(os.Stdout, logData))
+	logWrite := logx.NewWriter(io.MultiWriter(os.Stdout, logData, f))
 	logx.SetWriter(logWrite)
 
 	return &ServiceContext{

@@ -4,6 +4,7 @@ import (
 	"dv/internel/serve/api/internal/config"
 	"dv/internel/serve/api/internal/handler"
 	"dv/internel/serve/api/internal/svc"
+	"dv/internel/serve/api/internal/svc/ws"
 	"flag"
 	"fmt"
 
@@ -21,6 +22,10 @@ func main() {
 
 	server := rest.MustNewServer(c.RestConf, rest.WithCors())
 	defer server.Stop()
+
+	hub := ws.NewHub()
+	hub.Run()
+	server.AddRoute(ws.ShowLogWsRoute(hub))
 
 	ctx := svc.NewServiceContext(c)
 	handler.RegisterHandlers(server, ctx)

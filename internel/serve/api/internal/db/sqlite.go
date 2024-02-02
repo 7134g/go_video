@@ -12,7 +12,7 @@ var (
 	db *gorm.DB
 )
 
-func InitSqlite(fp string) {
+func InitSqlite(fp string) *gorm.DB {
 	var err error
 	db, err = gorm.Open(sqlite.Open(fp), &gorm.Config{
 		PrepareStmt: true,
@@ -26,6 +26,7 @@ func InitSqlite(fp string) {
 	}
 
 	_ = db.AutoMigrate(&model.Task{})
+	return db
 }
 
 func GetDB() *gorm.DB {

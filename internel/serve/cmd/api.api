@@ -40,8 +40,8 @@ service task_serve {
 	@handler SetConfig
 	post /config/set (SetConfigRequest) returns (SetConfigResponse)
 
-	@handler ShowLog
-	get /log (ShowLogRequest) returns (ShowLogResponse)
+//	@handler ShowLog
+//	get /log (ShowLogRequest) returns (ShowLogResponse)
 }
 
 //type Task {
@@ -154,10 +154,10 @@ type (
 	}
 )
 
-type (
-	ShowLogRequest {
-	}
-	ShowLogResponse {
-		Text string `json:"text"`
-	}
-)
+//type (
+//	ShowLogRequest {
+//	}
+//	ShowLogResponse {
+//		Text string `json:"text"`
+//	}
+//)
