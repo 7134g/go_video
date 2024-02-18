@@ -81,11 +81,6 @@ func (c *Client) Write(data []byte) {
 	c.send <- data
 }
 
-func (c *Client) Stop() {
-	_ = c.conn.Close()
-	c.cancel()
-}
-
 // readPump pumps messages from the websocket connection to the hub.
 //
 // The application runs readPump in a per-connection goroutine. The application
@@ -95,6 +90,7 @@ func (c *Client) readPump() {
 	defer func() {
 		c.hub.unregister <- c
 		_ = c.conn.Close()
+		c.cancel()
 	}()
 	c.conn.SetReadLimit(maxMessageSize)
 	c.conn.SetPongHandler(func(string) error {
@@ -134,6 +130,8 @@ func (c *Client) writePump() {
 
 	for {
 		select {
+		case <-c.Ctx.Done():
+			return
 		case message, ok := <-c.send:
 			_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
