@@ -1,7 +1,6 @@
 package svc
 
 import (
-	"bytes"
 	"dv/internel/serve/api/internal/config"
 	"dv/internel/serve/api/internal/db"
 	"dv/internel/serve/api/internal/middleware"
@@ -9,6 +8,7 @@ import (
 	"dv/internel/serve/api/internal/util/files"
 	"dv/internel/serve/api/internal/util/model"
 	"dv/internel/serve/api/internal/util/proxy"
+	"dv/internel/serve/api/internal/util/ws_conn"
 	"fmt"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/threading"
@@ -23,12 +23,14 @@ type ServiceContext struct {
 	AuthInterceptor rest.Middleware
 	TaskModel       *model.TaskModel
 	TaskControl     *task_control.TaskControl
-	LogData         *bytes.Buffer
+	LogData         *logCache
+
+	Hub *ws_conn.Hub
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
+	// db
 	taskModel := model.NewTaskModel(db.InitSqlite(c.DB))
-
 	task_control.InitTask(c)
 
 	// 开启被动代理
@@ -51,9 +53,13 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	if err != nil {
 		panic(err)
 	}
-	logData := bytes.NewBuffer(nil)
+	logData := newLogCache()
 	logWrite := logx.NewWriter(io.MultiWriter(os.Stdout, logData, f))
 	logx.SetWriter(logWrite)
+
+	// ws
+	hub := ws_conn.NewHub()
+	threading.GoSafe(hub.Run)
 
 	return &ServiceContext{
 		Config:          c,
@@ -61,5 +67,6 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		TaskModel:       taskModel,
 		TaskControl:     task_control.NewTaskControl(c.TaskControlConfig.Concurrency),
 		LogData:         logData,
+		Hub:             hub,
 	}
 }

@@ -1,16 +1,9 @@
-package ws
+package ws_conn
 
 import (
 	"github.com/gorilla/websocket"
 	"net/http"
-	"time"
 )
-
-type messageResponse struct {
-	Code int    `json:"code" xml:"code"`
-	Msg  string `json:"msg" xml:"msg"`
-	Data any    `json:"data,omitempty" xml:"data,omitempty"`
-}
 
 var upgrade = websocket.Upgrader{
 	ReadBufferSize:  1024,
@@ -37,18 +30,7 @@ func InitClient(hub *Hub, w http.ResponseWriter, r *http.Request) (*Client, erro
 		return nil, err
 	}
 
-	client := &Client{
-		id:   time.Now().UnixNano(),
-		hub:  hub,
-		conn: conn,
-		send: make(chan []byte, bufSize),
-		readHandle: func(message []byte) []byte {
-			return message
-		},
-		writeHandle: func(message []byte) []byte {
-			return message
-		},
-	}
+	client := NewClient(hub, conn)
 
 	return client, nil
 }

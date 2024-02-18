@@ -1,4 +1,4 @@
-package ws
+package ws_conn
 
 import (
 	"github.com/zeromicro/go-zero/core/logx"

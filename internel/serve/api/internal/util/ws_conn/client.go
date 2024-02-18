@@ -1,7 +1,8 @@
-package ws
+package ws_conn
 
 import (
 	"bytes"
+	"context"
 	"log"
 	"time"
 
@@ -30,6 +31,24 @@ var (
 	space   = []byte{' '}
 )
 
+func NewClient(hub *Hub, conn *websocket.Conn) *Client {
+	ctx, cancel := context.WithCancel(context.Background())
+	return &Client{
+		id:     time.Now().UnixNano(),
+		hub:    hub,
+		conn:   conn,
+		send:   make(chan []byte, bufSize),
+		Ctx:    ctx,
+		cancel: cancel,
+		readHandle: func(message []byte) []byte {
+			return message
+		},
+		writeHandle: func(message []byte) []byte {
+			return message
+		},
+	}
+}
+
 // Client is a middleman between the websocket connection and the hub.
 type Client struct {
 	id int64
@@ -42,6 +61,8 @@ type Client struct {
 	// Buffered channel of outbound messages.
 	send chan []byte
 
+	Ctx         context.Context
+	cancel      context.CancelFunc
 	readHandle  operateFunc
 	writeHandle operateFunc
 }
@@ -54,6 +75,15 @@ func (c *Client) SetReadHandle(fn operateFunc) {
 
 func (c *Client) SetWriteHandle(fn operateFunc) {
 	c.writeHandle = fn
+}
+
+func (c *Client) Write(data []byte) {
+	c.send <- data
+}
+
+func (c *Client) Stop() {
+	_ = c.conn.Close()
+	c.cancel()
 }
 
 // readPump pumps messages from the websocket connection to the hub.
