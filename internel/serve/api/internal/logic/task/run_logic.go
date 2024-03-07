@@ -31,7 +31,11 @@ func (l *RunLogic) Run(req *types.TaskRunRequest) (resp *types.TaskRunResponse, 
 	}
 
 	task := make([]model.Task, 0)
-	l.svcCtx.TaskModel.DB.Find(&task)
+	_db := l.svcCtx.TaskModel.DB
+	if len(req.IDS) != 0 {
+		_db = _db.Where("id IN ?", req.IDS)
+	}
+	_db.Find(&task)
 
 	if l.svcCtx.TaskControl.GetStatus() {
 		return &types.TaskRunResponse{Message: "正在执行中"}, err

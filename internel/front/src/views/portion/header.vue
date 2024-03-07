@@ -67,8 +67,15 @@ export default {
 
     runTask(){
       console.log("run.......")
-
-      requestFunc.RunTask().then(result => {
+      let idsMap = useCounterStore().runIdMap
+      let param={
+        ids: []
+      }
+      for (let key in idsMap) {
+        param.ids.push(parseInt(key))
+      }
+      console.log(param)
+      requestFunc.RunTask(param).then(result => {
         // console.log(JSON.stringify(result))
         if (result.data.message !== "") {
           this.$message.success(result.data.message);

@@ -121,10 +121,11 @@ function GetTaskList(dataPage) {
     });
 }
 
-function RunTask(body) {
+function RunTask(param) {
     return new Promise((resolve, reject) => {
-        let runURL = baseSiteUrl+'/task/run';
-        request.get(runURL, body).then(
+        let runURL = baseSiteUrl+'/task/run?ids=['+param.ids+']';
+        // console.log(runURL)
+        request.get(runURL).then(
             res => {
                 // console.log(res);
                 resolve(res);

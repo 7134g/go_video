@@ -49,7 +49,8 @@ type TaskDeleteResponse struct {
 }
 
 type TaskRunRequest struct {
-	Stop bool `form:"stop,optional"`
+	IDS  []uint `form:"ids,optional"`
+	Stop bool   `form:"stop,optional"`
 }
 
 type TaskRunResponse struct {

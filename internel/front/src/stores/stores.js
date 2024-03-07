@@ -38,6 +38,9 @@ export const useCounterStore = defineStore('counter', {
         page: 1,
         size: 20,
       },
+
+      runIdMap: {},
+
     }
   },
   // 也可以定义为
@@ -67,6 +70,15 @@ export const useCounterStore = defineStore('counter', {
 
     setFormSwitch(value) {
       this.formSwitch = value
+    },
+
+    setRunIdList(value) {
+      // console.log(this.runIdMap)
+      this.runIdMap = {}
+      for (let i = 0; i < value.length; i++) {
+        this.runIdMap[value[i].id] = null
+      }
+
     },
 
   },

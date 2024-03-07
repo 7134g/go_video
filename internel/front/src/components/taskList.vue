@@ -10,7 +10,9 @@ import formData from "@/components/formData.vue";
 
 <template>
   <div v-if="showDataList" >
-    <el-table :data="tableData" style="width: 100%" height="100%">
+<!--    <el-table :data="tableData" style="width: 100%" height="100%">-->
+    <el-table :data="tableData" style="width: 100%" height="100%" @selection-change="handleSelectionChange">
+      <el-table-column type="selection" width="55"/>
       <el-table-column type="index" label="序号" width="80" />
 <!--      <el-table-column fixed prop="id" label="任务号" width="80" />-->
       <el-table-column prop="name" label="任务名称" width="200" />
@@ -159,6 +161,14 @@ export default {
 
       this.render()
     },
+
+    handleSelectionChange(arr) {
+      useCounterStore().setRunIdList(arr)
+      // console.log("=======================")
+      // console.log(arr)
+      // console.log(useCounterStore().runIdMap)
+    },
+
 
     render(){
       this.$emit('render-task-list', useCounterStore().getTaskType());
