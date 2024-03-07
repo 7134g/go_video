@@ -55,13 +55,18 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 					Path:    "/config/set",
 					Handler: task.SetConfigHandler(serverCtx),
 				},
-				{
-					Method:  http.MethodGet,
-					Path:    "/log",
-					Handler: task.ShowLogHandler(serverCtx),
-				},
 			}...,
 		),
 		rest.WithPrefix("/task"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/get_file",
+				Handler: GetCertFileHandler(serverCtx),
+			},
+		},
 	)
 }

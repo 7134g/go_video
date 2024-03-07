@@ -1,5 +1,5 @@
 Name: task_serve
-Host: 127.0.0.1
+Host: 
 Port: 8888
 Mode: dev
 
@@ -38,4 +38,4 @@ Proxy: http://127.0.0.1:7890
 ProxyStatus: true
 
 # web监听
-WebProxy: 127.0.0.1:10888
+WebProxy: :10888

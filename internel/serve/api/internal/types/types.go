@@ -92,11 +92,11 @@ type SetConfigRequest struct {
 type SetConfigResponse struct {
 }
 
-type ShowLogRequest struct {
+type GetCertRequest struct {
+	File string `form:"file"`
 }
 
-type ShowLogResponse struct {
-	Text string `json:"text"`
+type GetCertResponse struct {
 }
 
 type DbQueryList struct {
