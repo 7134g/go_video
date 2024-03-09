@@ -37,9 +37,12 @@ func (l *RunLogic) Run(req *types.TaskRunRequest) (resp *types.TaskRunResponse, 
 	}
 	_db.Find(&task)
 
-	if l.svcCtx.TaskControl.GetStatus() {
-		return &types.TaskRunResponse{Message: "正在执行中"}, err
+	if len(task) == 0 {
+		return &types.TaskRunResponse{Message: "无任务"}, err
 	}
+	//if l.svcCtx.TaskControl.GetStatus() {
+	//	return &types.TaskRunResponse{Message: "正在执行中"}, err
+	//}
 	go l.svcCtx.TaskControl.Run(task)
 
 	return &types.TaskRunResponse{Message: "开始运行..."}, nil
