@@ -101,7 +101,7 @@ func MatchInformation() {
 					name = parts[0]
 				}
 
-				table.ProxyCatchHtml.Each(func(title string, html string) {
+				table.ProxyCatchHtmlTitle.Each(func(title string, html string) {
 					regKey, _ := regexp.Compile(fmt.Sprintf("(%s)|(%s)|(%s)", link, filename, name))
 					if regKey.MatchString(html) {
 						logx.Debugf("taskId %d change name %s", taskId, title)
@@ -119,7 +119,7 @@ func MatchInformation() {
 
 		for _, k := range deleteKey {
 			table.ProxyCatchUrl.Del(k)
-			table.ProxyCatchHtml.Del(k)
+			table.ProxyCatchHtmlTitle.Del(k)
 		}
 
 	}

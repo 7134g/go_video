@@ -2,7 +2,6 @@ package task_control
 
 import (
 	"bytes"
-	"dv/internel/serve/api/internal/util/calc"
 	"dv/internel/serve/api/internal/util/m3u8"
 	"dv/internel/serve/api/internal/util/model"
 	"dv/internel/serve/api/internal/util/table"
@@ -15,7 +14,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type download struct {
@@ -25,7 +23,7 @@ type download struct {
 	fileDir  string // 目录
 	fileName string // 文件名
 
-	fileSize      int64         // 目前文件大小
+	//fileSize      int64         // 目前文件大小
 	totalFileSize int64         // 文件总大小
 	stop          chan struct{} // 打印进度
 }
@@ -152,19 +150,28 @@ func (d *download) get(client *http.Client, req *http.Request, write io.Writer) 
 	ctxRange := resp.Header.Get("Content-Range")
 	if len(ctxRange) == 0 {
 		// 记录文件总大小
-		d.totalFileSize = resp.ContentLength
+		d.recordDownloadMaxLength(uint(resp.ContentLength))
 	} else {
 		// Content-Range: bytes 1629222-5510871/5510872 取 5510872
 		// 5510872 指的是文件总大小
+
+		begin := strings.Index(ctxRange, " ")
+		end := strings.Index(ctxRange, "-")
+		haveLengthString := ctxRange[begin+1 : end]
+		haveLength, err := strconv.Atoi(haveLengthString)
+		if err != nil {
+			return err
+		}
+		d.recordDownloadNow(uint(haveLength))
+
 		completeFileSizeString := ctxRange[strings.LastIndex(ctxRange, "/")+1:]
 		completeFileSize, err := strconv.Atoi(completeFileSizeString)
 		if err != nil {
 			return err
 		}
-		d.totalFileSize = int64(completeFileSize)
+		d.recordDownloadMaxLength(uint(completeFileSize))
 	}
 
-	go d.printDownloadMessage()
 	return d.rw(resp.Body, write)
 }
 
@@ -177,14 +184,17 @@ func (d *download) rw(read io.Reader, write io.Writer) error {
 		if err != nil {
 			if err == io.EOF {
 				// 完成
-				d.fileSize += int64(rn)
+				//d.fileSize += int64(rn)
+				d.recordDownloadNow(uint(rn))
 				_, _ = write.Write(bs[:rn])
 				return nil
 			}
 			return err
 		}
 
-		d.fileSize += int64(rn)
+		d.recordDownloadNow(uint(rn))
+
+		//d.fileSize += int64(rn)
 		_, err = write.Write(bs[:rn])
 		if err != nil {
 			return err
@@ -192,35 +202,15 @@ func (d *download) rw(read io.Reader, write io.Writer) error {
 	}
 }
 
-// 视频下载进度
-func (d *download) printDownloadMessage() {
-	if d.t.VideoType != model.VideoTypeMp4 {
-		// 说明此时下的是m3u8这类分片视频
-		return
+func (d *download) recordDownloadNow(value uint) {
+	if d.t.VideoType != model.VideoTypeM3u8 {
+		table.DownloadTaskByteLength.Inc(d.t.ID, value)
+		table.DownloadTimeSince.Set(d.t.ID, value)
 	}
-	var now = time.Now()                                         // 记录耗时
-	var fileSize = float64(d.totalFileSize) / 1024 / 1024 / 1024 // gb
-	var lastNowRS float64                                        // 上一次打印消息的已读数据长度
+}
 
-	ticker := time.NewTicker(time.Second * 3) // 间隔时间打印
-	for {
-		var msg string
-		select {
-		case <-ticker.C:
-			nowRS := float64(d.fileSize)
-			score := nowRS / float64(d.totalFileSize) * 100
-			dataByTime := (nowRS - lastNowRS) / float64(3) // 间隔时间内下载的数据, byte
-			speed, unit := calc.UnitReturn(dataByTime)
-			msg = fmt.Sprintf("百分比 %.2f 速度 %.3f %s/s | %.3f GB", score, speed, unit, fileSize)
-			lastNowRS = nowRS
-			table.DownloadTaskScore.Set(d.t.ID, uint(score*100))
-			logx.Infof("%s %s\n", d.fileName, msg)
-		case <-d.stop:
-			averageSpeed := float64(d.fileSize) / time.Since(now).Seconds() // 本次每秒下载字节数
-			speed, unit := calc.UnitReturn(averageSpeed)
-			msg = fmt.Sprintf("平均速度 %.2f %s/s <======== done", speed, unit)
-			logx.Infof("%s %s\n", d.fileName, msg)
-			return
-		}
+func (d *download) recordDownloadMaxLength(value uint) {
+	if d.t.VideoType != model.VideoTypeM3u8 {
+		table.DownloadTaskMaxLength.Set(d.t.ID, value)
 	}
 }

@@ -39,41 +39,40 @@ func (c *TaskControl) start() {
 	c.printStop = make(chan struct{})
 }
 
-func (c *TaskControl) incDoneCount() {
+func (c *TaskControl) incDoneCount(d *download) {
 	c.mux.Lock()
 	defer c.mux.Unlock()
 	c.doneCount++
+	table.DownloadTaskMaxLength.Set(d.t.ID, 0)
+	table.DownloadTaskByteLength.Set(d.t.ID, 0)
+	table.DownloadTimeSince.Set(d.t.ID, 0)
 }
 
 // 所有任务进度
-func (c *TaskControl) printDownloadProgress(t model.Task, taskTotal uint) {
-	if t.VideoType == model.VideoTypeMp4 {
-		return
-	}
-
+func (c *TaskControl) printDownloadProgress(t model.Task) {
 	ticker := time.NewTicker(time.Second * 3)
-	var lastDownloadTimeSince uint
 	for {
 		select {
 		case <-c.printStop:
 			return
 		case <-ticker.C:
-			nowDownloadDataLen, exist := table.DownloadDataLen.Get(t.ID)
+			maxLength, exist := table.DownloadTaskMaxLength.Get(t.ID)
+			if !exist {
+				continue
+			}
+			nowDownloadDataLen, exist := table.DownloadTaskByteLength.Get(t.ID)
 			if !exist {
 				continue
 			}
 
-			downloadTimeSince := nowDownloadDataLen - lastDownloadTimeSince
+			downloadTimeSince, _ := table.DownloadTimeSince.Get(t.ID)
 			speed, unit := calc.UnitReturn(float64(downloadTimeSince))
-			score := float64(c.doneCount) / float64(taskTotal) * 100
-			table.DownloadTaskScore.Set(t.ID, uint(score*100))
-			log.Println(fmt.Sprintf("%s 下载进度(%d/%d) 速度：%.2f %s/s 完成度：%.2f ",
+			score := float64(nowDownloadDataLen) / float64(maxLength) * 100
+			log.Println(fmt.Sprintf("%s 进度：%.2f 速度：%.2f %s/s",
 				t.Name,
-				c.doneCount, taskTotal,
-				speed/3, unit,
 				score,
-			) + "%")
-			lastDownloadTimeSince = nowDownloadDataLen
+				speed/3, unit,
+			))
 		}
 	}
 }
@@ -119,7 +118,7 @@ func (c *TaskControl) submit(fn particleFunc, params []any) {
 			return
 		}
 
-		c.incDoneCount()
+		c.incDoneCount(d)
 		if d.t.VideoType == model.VideoTypeMp4 {
 			_ = tasKModel.UpdateStatus(d.t.ID, model.StatusSuccess)
 			logx.Info(d.t.Name, " is done")
@@ -138,6 +137,7 @@ func (c *TaskControl) Run(tasks []model.Task) {
 	//go c.printDownloadProgress(uint(len(tasks)))
 
 	for _, m := range tasks {
+		go c.printDownloadProgress(m)
 		w := newWork(m)
 		particle, d := w.parseTask()
 		if particle == nil {

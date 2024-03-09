@@ -48,7 +48,15 @@ func (l *ListLogic) List(req *types.TaskListRequest) (resp *types.TaskListRespon
 		if model.StatusSuccess.Eq(task.Status) {
 			data.Score = 10000
 		} else {
-			data.Score, _ = table.DownloadTaskScore.Get(task.ID)
+			// 分子分母
+			molecule, _ := table.DownloadTaskByteLength.Get(task.ID)
+			denominator, _ := table.DownloadTaskMaxLength.Get(task.ID)
+			if denominator == 0 {
+				data.Score = 0
+			} else {
+				data.Score = uint(float64(molecule) / float64(denominator))
+			}
+
 		}
 		resp.List = append(resp.List, data)
 	}

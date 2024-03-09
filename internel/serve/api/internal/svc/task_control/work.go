@@ -110,15 +110,11 @@ func (w work) getVideo(params []interface{}) error {
 	if err != nil {
 		return err
 	}
-	d.fileSize = info.Size()
+	table.DownloadTaskByteLength.Set(w.task.ID, uint(info.Size()))
 
-	defer func(file *os.File) {
-		info, _ := file.Stat()
-		table.DownloadDataLen.Inc(w.task.ID, uint(info.Size()))
-		_ = file.Close()
-	}(file)
-	if d.fileSize > 0 {
-		d.req.Header.Set("Range", fmt.Sprintf("bytes=%d-", d.fileSize))
+	defer file.Close()
+	if info.Size() > 0 {
+		d.req.Header.Set("Range", fmt.Sprintf("bytes=%d-", info.Size()))
 	}
 
 	return d.get(tcConfig.Client, d.req, file)
@@ -132,12 +128,15 @@ func (w work) getM3u8(params []interface{}) error {
 		return err
 	}
 
+	table.DownloadTaskByteLength.Set(w.task.ID, 0)
+	table.DownloadTaskMaxLength.Set(w.task.ID, uint(len(segments)))
 	var playbackDuration float32 // 该视频总时间
 	for _, segment := range segments {
 		playbackDuration += segment.Duration
 	}
 	logx.Infof("%v 该电影时长 %v \n", w.task.Name, m3u8.CalculationTime(playbackDuration))
 
+	// 计算应该多少并发
 	concurrency := tcConfig.ConcurrencyM3u8
 	if uint(len(segments))/(concurrency*concurrency) > concurrency {
 		concurrency = uint(len(segments)) / (concurrency * concurrency)
@@ -146,7 +145,7 @@ func (w work) getM3u8(params []interface{}) error {
 	dir := filepath.Join(tcConfig.SaveDir, w.task.Name)
 	core := NewTaskControl(concurrency)
 	core.start()
-	go core.printDownloadProgress(w.task, uint(len(segments)))
+	go core.printDownloadProgress(w.task)
 	for index, segment := range segments {
 		link, err := url.Parse(d.req.URL.String())
 		if err != nil {
@@ -157,7 +156,7 @@ func (w work) getM3u8(params []interface{}) error {
 			return err
 		}
 
-		fileName := fmt.Sprintf("%s_%d", w.task.Name, index)
+		fileName := fmt.Sprintf("%s_%05d", w.task.Name, index)
 		pathPart := strings.Split(link.Path, ".")
 		if len(pathPart) > 0 {
 			fileName = fmt.Sprintf("%s.%s", fileName, pathPart[len(pathPart)-1])
@@ -175,51 +174,79 @@ func (w work) getM3u8(params []interface{}) error {
 		request.Header = d.req.Header
 		dChild.req = request
 
-		if crypto, exist := table.CryptoVideoTable.Get(w.task.ID); exist {
-			// 编码过的视频
-			tf := func(params []any) error {
-				buf := bytes.NewBuffer(nil)
-				if err := dChild.get(tcConfig.Client, dChild.req, buf); err != nil {
-					return err
-				}
-				//table.DownloadDataLen.Inc(w.task.ID, uint(buf.Len()))
-				//_, err := os.Stat("./test.mp4")
-				//if err != nil {
-				//	f, _ := os.Create("./test.mp4")
-				//	f.Write(buf.Bytes())
-				//	f.Close()
-				//}
+		//if crypto, exist := table.CryptoVideoTable.Get(w.task.ID); exist {
+		//	// 编码过的视频
+		//	tf := func(params []any) error {
+		//		buf := bytes.NewBuffer(nil)
+		//		if err := dChild.get(tcConfig.Client, dChild.req, buf); err != nil {
+		//			return err
+		//		}
+		//
+		//		data := aes.AESDecrypt(buf.Bytes(), crypto)
+		//		if data == nil {
+		//			return errors.New("视频格式解析失败")
+		//		}
+		//		savePath := filepath.Join(dir, dChild.fileName)
+		//		f, err := os.Create(savePath)
+		//		if err != nil {
+		//			return err
+		//		}
+		//		defer f.Close()
+		//
+		//		_, err = io.Copy(f, io.NopCloser(bytes.NewReader(data)))
+		//		if err != nil {
+		//			return err
+		//		}
+		//		table.DownloadTaskByteLength.Inc(w.task.ID, 1)
+		//		return nil
+		//	}
+		//	//dChild.req = d.req
+		//	core.submit(tf, []any{dChild})
+		//} else {
+		//	// 无编码
+		//	tf := func(params []interface{}) error {
+		//		err := w.getVideo(params)
+		//		if err != nil {
+		//			return err
+		//		}
+		//
+		//		table.DownloadTaskByteLength.Inc(w.task.ID, 1)
+		//		return nil
+		//	}
+		//	core.submit(tf, []any{dChild})
+		//}
 
+		crypto, exist := table.CryptoVideoTable.Get(w.task.ID)
+		tf := func(params []interface{}) error {
+			buf := bytes.NewBuffer(nil)
+			if err := dChild.get(tcConfig.Client, dChild.req, buf); err != nil {
+				return err
+			}
+
+			if exist {
 				data := aes.AESDecrypt(buf.Bytes(), crypto)
 				if data == nil {
 					return errors.New("视频格式解析失败")
 				}
-				savePath := filepath.Join(dir, dChild.fileName)
-				f, err := os.Create(savePath)
-				if err != nil {
-					return err
-				}
-				defer f.Close()
+				buf = bytes.NewBuffer(nil)
+				buf.Write(data)
+			}
 
-				_, err = io.Copy(f, io.NopCloser(bytes.NewReader(data)))
-
+			savePath := filepath.Join(dir, dChild.fileName)
+			f, err := os.Create(savePath)
+			if err != nil {
 				return err
 			}
-			//dChild.req = d.req
-			core.submit(tf, []any{dChild})
-		} else {
-			// 无编码
-			tf := func(params []interface{}) error {
-				err := w.getVideo(params)
-				if err != nil {
-					return err
-				}
-
-				return nil
+			defer f.Close()
+			count, err := io.Copy(f, buf)
+			if err != nil {
+				return err
 			}
-			core.submit(tf, []any{dChild})
+			table.DownloadTaskByteLength.Inc(w.task.ID, 1)
+			table.DownloadTimeSince.Set(d.t.ID, uint(count))
+			return nil
 		}
-
+		core.submit(tf, []any{dChild})
 	}
 	core.wg.Wait()
 	core.Stop()
@@ -236,7 +263,6 @@ func (w work) getM3u8(params []interface{}) error {
 		logx.Error(dir, err)
 	} else {
 		_ = os.RemoveAll(dir) // 删除文件夹
-
 	}
 
 	logx.Infof("%s ===================> 任务完成,耗时 %s\n", w.task.Name, time.Since(beginTime))

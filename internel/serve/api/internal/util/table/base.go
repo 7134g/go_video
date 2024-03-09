@@ -31,8 +31,8 @@ func (m *cmpMap[K, D]) Get(key K) (D, bool) {
 }
 
 func (m *cmpMap[K, D]) Inc(key K, count D) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
+	m.lock.Lock()
+	defer m.lock.Unlock()
 
 	value, exist := m.body[key]
 	if exist {
@@ -43,8 +43,8 @@ func (m *cmpMap[K, D]) Inc(key K, count D) {
 }
 
 func (m *cmpMap[K, D]) Del(key K) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
+	m.lock.Lock()
+	defer m.lock.Unlock()
 	delete(m.body, key)
 }
 

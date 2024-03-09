@@ -168,7 +168,7 @@ func (r *skip) ModifyResponse(res *http.Response) error {
 	}
 
 	if title, _ := ParseHtmlTitle(bytes.NewBuffer(data)); title != "" {
-		table.ProxyCatchHtml.Set(title, bytes.NewBuffer(data).String())
+		table.ProxyCatchHtmlTitle.Set(title, bytes.NewBuffer(data).String())
 	}
 
 	res.Body = io.NopCloser(bytes.NewBuffer(data))
