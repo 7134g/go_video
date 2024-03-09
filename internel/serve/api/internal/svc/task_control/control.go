@@ -111,6 +111,7 @@ func (c *TaskControl) submit(fn particleFunc, params []any) {
 					logx.Field("retry_count", table.GetErrCount(key)),
 					logx.Field("key", key),
 					logx.Field("error", err),
+					logx.Field("sleep_time", tcConfig.TaskErrorDuration),
 				)
 				time.Sleep(time.Second * time.Duration(tcConfig.TaskErrorDuration))
 				c.submit(fn, []any{d}) // 重试

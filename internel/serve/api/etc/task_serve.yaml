@@ -5,6 +5,9 @@ Mode: dev
 Level: error
 OpenChrome: false
 
+Middlewares:
+  Log: false
+
 Log:
   Mode: console
   Encoding: plain
