@@ -88,10 +88,7 @@ func (c *TaskControl) submit(fn particleFunc, params []any) {
 
 	d := params[0].(*download)
 	go threading.GoSafe(func() {
-		defer func() {
-			c.wg.Done()
-			<-c.vacancy
-		}()
+		defer c.submitDone()
 		if d == nil {
 			return
 		}
@@ -114,7 +111,7 @@ func (c *TaskControl) submit(fn particleFunc, params []any) {
 					logx.Field("sleep_time", tcConfig.TaskErrorDuration),
 				)
 				time.Sleep(time.Second * time.Duration(tcConfig.TaskErrorDuration))
-				c.submit(fn, []any{d}) // 重试
+				go c.submit(fn, []any{d}) // 重试
 			}
 			return
 		}
@@ -127,6 +124,11 @@ func (c *TaskControl) submit(fn particleFunc, params []any) {
 
 		return
 	})
+}
+
+func (c *TaskControl) submitDone() {
+	c.wg.Done()
+	<-c.vacancy
 }
 
 func (c *TaskControl) Run(tasks []model.Task) {
