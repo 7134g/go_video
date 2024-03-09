@@ -2,6 +2,8 @@ Name: task_serve
 Host: 
 Port: 8888
 Mode: dev
+Level: error
+OpenChrome: false
 
 Log:
   Mode: console

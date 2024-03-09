@@ -51,7 +51,15 @@ func NewTaskControl(concurrency uint) *TaskControl {
 }
 
 func InitTask(c config.Config) {
+	// 下载目录
 	dir, err := filepath.Abs(c.SaveDir)
+	if err != nil {
+		panic(err)
+	}
+	_ = os.MkdirAll(dir, 0700)
+
+	// 存放历史m3u8内容目录
+	dir, err = filepath.Abs(filepath.Join(c.SaveDir, "m3u8"))
 	if err != nil {
 		panic(err)
 	}

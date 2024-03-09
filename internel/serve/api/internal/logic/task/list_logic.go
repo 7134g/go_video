@@ -2,6 +2,7 @@ package task
 
 import (
 	"context"
+	"dv/internel/serve/api/internal/util/model"
 	"dv/internel/serve/api/internal/util/table"
 	"github.com/jinzhu/copier"
 
@@ -44,7 +45,11 @@ func (l *ListLogic) List(req *types.TaskListRequest) (resp *types.TaskListRespon
 	for _, task := range list {
 		var data types.TaskInfo
 		_ = copier.Copy(&data, &task)
-		data.Score, _ = table.DownloadTaskScore.Get(task.ID)
+		if model.StatusSuccess.Eq(task.Status) {
+			data.Score = 10000
+		} else {
+			data.Score, _ = table.DownloadTaskScore.Get(task.ID)
+		}
 		resp.List = append(resp.List, data)
 	}
 

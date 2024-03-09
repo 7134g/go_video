@@ -3,6 +3,7 @@ package m3u8
 import (
 	"bufio"
 	"fmt"
+	"github.com/zeromicro/go-zero/core/logx"
 	"io"
 	"os"
 	"path/filepath"
@@ -215,4 +216,20 @@ func MergeFiles(saveDir string) error {
 	//fmt.Println(size, fileSize)
 
 	return err
+}
+
+func SaveM3u8File(sourceDir, name string, data []byte) {
+	fp := filepath.Join(sourceDir, "m3u8", name)
+	f, err := os.Create(fp)
+	if err != nil {
+		logx.Error(err)
+		return
+	}
+	defer f.Close()
+
+	_, err = f.Write(data)
+	if err != nil {
+		logx.Error(err)
+		return
+	}
 }

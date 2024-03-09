@@ -5,6 +5,7 @@ import (
 )
 
 type Config struct {
+	OpenChrome bool
 	rest.RestConf
 
 	DB string // 数据库

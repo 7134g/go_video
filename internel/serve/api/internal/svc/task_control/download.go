@@ -30,13 +30,20 @@ type download struct {
 	stop          chan struct{} // 打印进度
 }
 
-func newDownload(t model.Task, fileDir, fileName string) *download {
+func newDownload(t model.Task, fileDir, fileName string, ext bool) *download {
 	_ = os.MkdirAll(fileDir, 0700)
+	var fn string
+	if !ext {
+		fn = fmt.Sprintf("%s.mp4", fileName)
+	} else {
+		fn = fileName
+	}
+
 	return &download{
 		t: t,
 
 		fileDir:  fileDir,
-		fileName: fmt.Sprintf("%s.mp4", fileName),
+		fileName: fn,
 		stop:     make(chan struct{}),
 	}
 }
@@ -53,12 +60,16 @@ func buildKey(id uint, name string, childFlag ...string) string {
 }
 
 func (d *download) getM3u8File(client *http.Client, req *http.Request) ([]*m3u8.Segment, error) {
+	// 保存m3u8文件
+	var saveM3u8SourceFile []byte
+
 	// 构建请求
 	buf := bytes.NewBuffer(nil)
 	if err := d.get(client, req, buf); err != nil {
 		return nil, err
 	}
 	logx.Debug(buf.String())
+	saveM3u8SourceFile = buf.Bytes()
 	m3u8Data, err := m3u8.ParseM3u8Data(buf)
 	if err != nil {
 		return nil, err
@@ -114,6 +125,7 @@ func (d *download) getM3u8File(client *http.Client, req *http.Request) ([]*m3u8.
 		break
 	}
 
+	m3u8.SaveM3u8File(d.fileDir, d.t.Name, saveM3u8SourceFile)
 	return m3u8Data.Segments, nil
 }
 
@@ -180,6 +192,7 @@ func (d *download) rw(read io.Reader, write io.Writer) error {
 	}
 }
 
+// 视频下载进度
 func (d *download) printDownloadMessage() {
 	if d.t.VideoType != model.VideoTypeMp4 {
 		// 说明此时下的是m3u8这类分片视频

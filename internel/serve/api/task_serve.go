@@ -36,6 +36,10 @@ func main() {
 }
 
 func openChrome(c config.Config) {
+	if !c.OpenChrome {
+		return
+	}
+
 	var u string
 	if c.Host == "" {
 		u = fmt.Sprintf("http://127.0.0.1:%d", c.Port)

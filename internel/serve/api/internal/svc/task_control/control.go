@@ -45,6 +45,7 @@ func (c *TaskControl) incDoneCount() {
 	c.doneCount++
 }
 
+// 所有任务进度
 func (c *TaskControl) printDownloadProgress(t model.Task, taskTotal uint) {
 	if t.VideoType == model.VideoTypeMp4 {
 		return

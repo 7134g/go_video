@@ -35,7 +35,7 @@ func (l *RunLogic) Run(req *types.TaskRunRequest) (resp *types.TaskRunResponse, 
 	if len(req.IDS) != 0 {
 		_db = _db.Where("id IN ?", req.IDS)
 	}
-	_db.Find(&task)
+	_db.Where("status != ?", model.StatusSuccess).Find(&task)
 
 	if len(task) == 0 {
 		return &types.TaskRunResponse{Message: "无任务"}, err

@@ -30,6 +30,10 @@ const (
 
 type statusEnum uint
 
+func (s statusEnum) Eq(value uint) bool {
+	return statusEnum(value) == s
+}
+
 const (
 	StatusWait statusEnum = iota
 	StatusRunning

@@ -80,6 +80,7 @@ func (w work) parseTask() (particleFunc, *download) {
 		w.task,
 		tcConfig.SaveDir,
 		w.task.Name,
+		false,
 	)
 	d.req = request
 	switch w.task.VideoType {
@@ -165,16 +166,29 @@ func (w work) getM3u8(params []interface{}) error {
 			w.task,
 			dir,
 			fileName,
+			true,
 		)
+		request, err := http.NewRequest(http.MethodGet, link.String(), nil)
+		if err != nil {
+			return err
+		}
+		request.Header = d.req.Header
+		dChild.req = request
 
 		if crypto, exist := table.CryptoVideoTable.Get(w.task.ID); exist {
 			// 编码过的视频
 			tf := func(params []any) error {
 				buf := bytes.NewBuffer(nil)
-				if err := dChild.get(tcConfig.Client, d.req, buf); err != nil {
+				if err := dChild.get(tcConfig.Client, dChild.req, buf); err != nil {
 					return err
 				}
-				table.DownloadDataLen.Set(w.task.ID, uint(buf.Len()))
+				//table.DownloadDataLen.Inc(w.task.ID, uint(buf.Len()))
+				//_, err := os.Stat("./test.mp4")
+				//if err != nil {
+				//	f, _ := os.Create("./test.mp4")
+				//	f.Write(buf.Bytes())
+				//	f.Close()
+				//}
 
 				data := aes.AESDecrypt(buf.Bytes(), crypto)
 				if data == nil {
@@ -185,21 +199,16 @@ func (w work) getM3u8(params []interface{}) error {
 				if err != nil {
 					return err
 				}
+				defer f.Close()
 
-				_, err = io.Copy(f, buf)
+				_, err = io.Copy(f, io.NopCloser(bytes.NewReader(data)))
 
 				return err
 			}
-			dChild.req = d.req
+			//dChild.req = d.req
 			core.submit(tf, []any{dChild})
 		} else {
 			// 无编码
-			request, err := http.NewRequest(http.MethodGet, link.String(), nil)
-			if err != nil {
-				return err
-			}
-			request.Header = d.req.Header
-			dChild.req = request
 			tf := func(params []interface{}) error {
 				err := w.getVideo(params)
 				if err != nil {
@@ -228,7 +237,7 @@ func (w work) getM3u8(params []interface{}) error {
 		}
 	}
 
-	_ = os.RemoveAll(dir) // 删除文件夹
+	//_ = os.RemoveAll(dir) // 删除文件夹
 
 	logx.Infof("%s ===================> 任务完成,耗时 %s\n", w.task.Name, time.Since(beginTime))
 	return nil
