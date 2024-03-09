@@ -68,6 +68,7 @@ func InitTask(c config.Config) {
 	if _, err := os.Stat(c.FfmpegPath); err != nil {
 		c.UseFfmpeg = false
 	}
+	c.FfmpegPath = "./" + c.FfmpegPath
 
 	tasKModel = model.NewTaskModel(db.GetDB())
 	tcConfig = &taskControlConfig{

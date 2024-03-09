@@ -228,16 +228,16 @@ func (w work) getM3u8(params []interface{}) error {
 
 	// 合并所有分片
 	if tcConfig.UseFfmpeg {
-		if err := m3u8.MergeFilesFfmpeg(dir, d.fileName, tcConfig.FfmpegPath); err != nil {
-			return err
-		}
+		err = m3u8.MergeFilesFfmpeg(dir, tcConfig.FfmpegPath)
 	} else {
-		if err := m3u8.MergeFiles(dir); err != nil {
-			return err
-		}
+		err = m3u8.MergeFiles(dir)
 	}
+	if err != nil {
+		logx.Error(dir, err)
+	} else {
+		_ = os.RemoveAll(dir) // 删除文件夹
 
-	//_ = os.RemoveAll(dir) // 删除文件夹
+	}
 
 	logx.Infof("%s ===================> 任务完成,耗时 %s\n", w.task.Name, time.Since(beginTime))
 	return nil

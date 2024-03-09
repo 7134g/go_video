@@ -27,7 +27,7 @@ TaskErrorMaxCount: 20
 # 错误时候休眠多久后重试
 TaskErrorDuration: 1
 # 使用ffmpeg进行合并分片
-UseFfmpeg: true
+UseFfmpeg: false
 # ffmpeg程序所在地址
 FfmpegPath: ffmpeg.exe
 
