@@ -23,7 +23,7 @@ func main() {
 	server := rest.MustNewServer(c.RestConf, rest.WithCors())
 	defer server.Stop()
 
-	go openChrome()
+	go openChrome(c)
 
 	ctx := svc.NewServiceContext(c)
 	handler.RegisterHandlers(server, ctx)
@@ -35,8 +35,19 @@ func main() {
 	server.Start()
 }
 
-func openChrome() {
-	cmd := exec.Command("cmd", "/C", "start", "chrome.exe", "http://127.0.0.1:8888")
+func openChrome(c config.Config) {
+	var u string
+	if c.Host == "" {
+		u = fmt.Sprintf("http://127.0.0.1:%d", c.Port)
+	}
+
+	cmd := exec.Command(
+		"cmd",
+		"/C",
+		"start",
+		"chrome.exe",
+		u,
+	)
 	if err := cmd.Start(); err != nil {
 		panic(err)
 	}
