@@ -42,3 +42,7 @@ https://www.test.com/1.m3u8
 https://www.test.com/1.mp4
 ...
 ```
+
+## feature
+1. ffmpeg 用cgo调用
+2. 前端自动刷新下载进度
