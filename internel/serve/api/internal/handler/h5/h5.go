@@ -8,9 +8,9 @@ import (
 var (
 	//go:embed dist/index.html
 	html []byte
-	//go:embed dist/assets/index.css
+	//go:embed dist/index.css
 	css []byte
-	//go:embed dist/assets/index.js
+	//go:embed dist/index.js
 	js []byte
 )
 

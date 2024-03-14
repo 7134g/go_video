@@ -17,7 +17,7 @@
 
 后端服务端口为 http://localhost:8888/
 
-前端端口为 http://localhost:5173/
+前端端口为 http://localhost:9999/
 
 
 #### 开启代理方式
