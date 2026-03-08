@@ -16,6 +16,9 @@ func ParseM3u8Data(reader io.Reader) (*M3u8, error) {
 	for s.Scan() {
 		lines = append(lines, s.Text())
 	}
+	if len(lines) == 0 {
+		return nil, fmt.Errorf("m3u8 file is empty")
+	}
 
 	var (
 		i     = 0

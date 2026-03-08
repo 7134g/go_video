@@ -3,13 +3,12 @@ package service
 import (
 	"errors"
 	"fmt"
-	"os"
-	"sync"
-
 	"go_video/internal/controller"
 	"go_video/internal/model"
 	"go_video/internal/repository"
 	"go_video/pkg/proxy"
+	"os"
+	"sync"
 )
 
 var (
@@ -140,15 +139,50 @@ func (s *ConfigService) handleInterceptor(cfg *model.Config) error {
 }
 
 func (s *ConfigService) startProxyServer(address string) {
-	fmt.Println("开启代理" + address)
+	fmt.Println("开启代理 -> " + address)
 
 	srv, err := proxy.NewServer()
 	if err != nil {
-		panic(err)
+		fmt.Printf("代理服务器启动失败: %v\n", err)
+		s.mu.Lock()
+		s.proxyRunning = false
+		s.mu.Unlock()
+		return
 	}
 	s.proxyServer = srv
+
+	go s.doTask(srv)
+
 	err = srv.Listen(address)
 	if err != nil {
-		panic(err)
+		fmt.Printf("代理监听失败: %v\n", err)
+		s.mu.Lock()
+		s.proxyRunning = false
+		s.mu.Unlock()
+	}
+}
+
+func (s *ConfigService) doTask(srv *proxy.Server) {
+	for {
+		select {
+		case t := <-srv.Tasks():
+			//fmt.Println("=============>", t.Title, t.URL)
+			repo := repository.NewTaskRepository()
+			existing, err := repo.GetByURL(t.URL)
+			if err == nil && existing.Status != model.TaskStatusRunning && existing.CreatedAt.After(t.CreateAt) {
+				_ = repo.UpdateNameAndHeader(existing.ID, t.Title, t.Headers)
+			} else if err != nil {
+				_ = repo.Create(&model.Task{
+					Name:      t.Title,
+					URL:       t.URL,
+					Header:    t.Headers,
+					Type:      t.Type,
+					CreatedAt: t.CreateAt,
+				})
+			}
+
+		case <-srv.Stop:
+			return
+		}
 	}
 }

@@ -36,7 +36,7 @@
         </el-table-column>
         <el-table-column label="操作" width="200">
           <template #default="{ row }">
-            <el-button size="small" @click="handleEdit(row)" :disabled="row.status !== 0 && row.status !== 4">编辑</el-button>
+            <el-button size="small" @click="handleEdit(row)" :disabled="row.status === 1">编辑</el-button>
             <el-button size="small" type="warning" @click="handlePause(row.id)" v-if="row.status === 1">暂停</el-button>
             <el-button size="small" type="primary" @click="handleRetry(row.id)" v-if="row.status === 3 || row.status === 4">重试</el-button>
             <el-button size="small" type="danger" @click="handleDelete(row.id)">删除</el-button>
@@ -83,6 +83,7 @@ const wsConnected = ref(false)
 const wsLogs = ref<{ time: string; data: string }[]>([])
 const logContainer = ref<HTMLElement>()
 let ws: WebSocket | null = null
+let refreshTimer: number | null = null
 
 const statusText = (s: number) => ['待执行', '执行中', '完成', '失败', '已暂停'][s]
 const statusType = (s: number) => {
@@ -180,9 +181,15 @@ function addLog(data: string) {
 onMounted(() => {
   loadTasks()
   connectWS()
+  refreshTimer = window.setInterval(() => {
+    if (wsConnected.value) loadTasks()
+  }, 5000)
 })
 
-onUnmounted(() => ws?.close())
+onUnmounted(() => {
+  ws?.close()
+  if (refreshTimer) clearInterval(refreshTimer)
+})
 </script>
 
 <style scoped>

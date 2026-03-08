@@ -2,10 +2,13 @@ package proxy
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 type Interceptor interface {
@@ -14,34 +17,43 @@ type Interceptor interface {
 
 type VideoDetector struct{}
 
-func (v *VideoDetector) IsVideo(rawURL string) bool {
+func (v *VideoDetector) GetVideo(rawURL string) (string, bool) {
 	u, err := url.Parse(rawURL)
 	if err != nil {
-		return false
+		return "", false
 	}
 	path := u.Path
-	return strings.HasSuffix(path, ".m3u8") || strings.HasSuffix(path, ".mp4")
+	if strings.HasSuffix(path, ".m3u8") {
+		return "m3u8", true
+	}
+	if strings.HasSuffix(path, ".mp4") {
+		return "mp4", true
+
+	}
+
+	return "", false
 }
 
 type RequestCapture struct{}
 
 func (r *RequestCapture) Capture(req *http.Request) *VideoTask {
-	headers := make(map[string]string)
-	for k, v := range req.Header {
-		if len(v) > 0 {
-			headers[k] = v[0]
-		}
-	}
+
+	headers, _ := json.Marshal(req.Header)
+
 	var body []byte
 	if req.Body != nil {
 		body, _ = io.ReadAll(req.Body)
 		req.Body = io.NopCloser(bytes.NewReader(body))
 	}
+	now := time.Now()
 	return &VideoTask{
-		URL:     req.URL.String(),
-		Method:  req.Method,
-		Headers: headers,
-		Body:    body,
+		URL:      req.URL.String(),
+		Method:   req.Method,
+		Headers:  string(headers),
+		Body:     body,
+		Title:    fmt.Sprintf("%d", now.UnixMilli()),
+		Type:     "",
+		CreateAt: now,
 	}
 }
 

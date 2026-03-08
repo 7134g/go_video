@@ -143,7 +143,12 @@ func (c *DownloadController) parseM3u8(ctx context.Context, m3u8URL string, head
 		req.Header[k] = v
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return nil
+		},
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -169,7 +174,12 @@ func (c *DownloadController) downloadSegment(ctx context.Context, segURL, filena
 		req.Header[k] = v
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return nil
+		},
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}

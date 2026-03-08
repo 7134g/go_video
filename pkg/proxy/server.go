@@ -14,6 +14,8 @@ type Server struct {
 	detector  *VideoDetector
 	capture   *RequestCapture
 	listener  net.Listener
+
+	Stop chan bool
 }
 
 func NewServer() (*Server, error) {
@@ -39,15 +41,16 @@ func NewServer() (*Server, error) {
 		detector:  &VideoDetector{},
 		capture:   &RequestCapture{},
 	}
-
+	s.Stop = make(chan bool)
 	proxy.SetRequestModifier(s)
 	return s, nil
 }
 
 func (s *Server) ModifyRequest(req *http.Request) error {
 	//fmt.Println(req.URL.String())
-	if s.detector.IsVideo(req.URL.String()) {
+	if videoType, ok := s.detector.GetVideo(req.URL.String()); ok {
 		task := s.capture.Capture(req)
+		task.Type = videoType
 		s.collector.Collect(task)
 	}
 	return nil
@@ -66,6 +69,7 @@ func (s *Server) Close() error {
 	if s.listener != nil {
 		return s.listener.Close()
 	}
+	s.Stop <- true
 	return nil
 }
 

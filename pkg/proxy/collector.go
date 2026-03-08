@@ -11,7 +11,7 @@ func NewCollector() *Collector {
 }
 
 func (c *Collector) Collect(task *VideoTask) {
-	if task != nil {
+	if task != nil && task.Title != "" {
 		c.tasks <- task
 	}
 }

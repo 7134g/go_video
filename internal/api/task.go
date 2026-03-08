@@ -4,9 +4,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
 	"go_video/internal/model"
 	"go_video/internal/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 type TaskHandler struct {
@@ -80,9 +81,7 @@ func (h *TaskHandler) Update(c *gin.Context) {
 	if req.URL != "" {
 		task.URL = req.URL
 	}
-	if req.Header != "" {
-		task.Header = req.Header
-	}
+	task.Header = req.Header
 	if req.Type != "" {
 		task.Type = req.Type
 	}

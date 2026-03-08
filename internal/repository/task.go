@@ -11,7 +11,7 @@ func NewTaskRepository() *TaskRepository {
 }
 
 func (r *TaskRepository) Create(task *model.Task) error {
-	return DB.Create(task).Error
+	return DB.Debug().Create(task).Error
 }
 
 func (r *TaskRepository) GetByID(id uint) (*model.Task, error) {
@@ -48,4 +48,14 @@ func (r *TaskRepository) GetByStatus(status model.TaskStatus) ([]model.Task, err
 	var tasks []model.Task
 	err := DB.Where("status = ?", status).Order("created_at desc").Find(&tasks).Error
 	return tasks, err
+}
+
+func (r *TaskRepository) GetByURL(url string) (*model.Task, error) {
+	var task model.Task
+	err := DB.Where("url = ?", url).First(&task).Error
+	return &task, err
+}
+
+func (r *TaskRepository) UpdateNameAndHeader(id uint, name, header string) error {
+	return DB.Exec("UPDATE tasks SET name = ?, header = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", name, header, id).Error
 }
