@@ -1,0 +1,25 @@
+package model
+
+type Config struct {
+	MaxConcurrentTasks   int               `json:"max_concurrent_tasks"` // 并发任务数
+	MaxSegmentWorkers    int               `json:"max_segment_workers"`  // 并发分片数
+	DownloadDir          string            `json:"download_dir"`
+	MaxConsecutiveErrors int               `json:"max_consecutive_errors"` // 连续错误数
+	DefaultHeaders       map[string]string `json:"default_headers"`
+	InterceptorEnabled   bool              `json:"interceptor_enabled"`
+	ProxyAddress         string            `json:"proxy_address"`
+}
+
+func DefaultConfig() *Config {
+	return &Config{
+		MaxConcurrentTasks:   3,
+		MaxSegmentWorkers:    5,
+		DownloadDir:          "./downloads",
+		MaxConsecutiveErrors: 10,
+		DefaultHeaders: map[string]string{
+			"user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+		},
+		InterceptorEnabled: false,
+		ProxyAddress:       "127.0.0.1:8888",
+	}
+}
