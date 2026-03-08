@@ -11,6 +11,8 @@ video.db
 go_video
 go_video.exe
 config.json
+ca.crt
+ca.key
 
 web/node_modules
 web/dist

@@ -2,10 +2,12 @@ package main
 
 import (
 	"embed"
+	"fmt"
 	"go_video/internal/api"
 	"go_video/internal/controller"
 	"go_video/internal/repository"
 	"go_video/internal/service"
+	"go_video/pkg/proxy"
 	"io/fs"
 	"log"
 	"net/http"
@@ -23,6 +25,7 @@ func main() {
 	if err := repository.InitDB(); err != nil {
 		log.Fatal("Failed to init database:", err)
 	}
+	InitCa()
 
 	// 加载配置并应用到 controller
 	cfg := service.GetConfigService().GetConfig()
@@ -76,5 +79,17 @@ func main() {
 		os.Exit(0)
 	}()
 
+	fmt.Println("访问 http://localhost:8080")
+	fmt.Println("设置代理 http://localhost:8888")
 	_ = r.Run(":8080")
+}
+
+func InitCa() {
+	installed, err := proxy.CheckCertInstalled()
+	if err != nil {
+		panic(err)
+	}
+	if !installed {
+		panic("需要先安装证书")
+	}
 }

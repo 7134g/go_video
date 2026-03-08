@@ -116,20 +116,7 @@ func (s *ConfigService) handleInterceptor(cfg *model.Config) error {
 	defer s.mu.Unlock()
 
 	if cfg.InterceptorEnabled && !s.proxyRunning {
-		caFile := "./certs/ca.crt"
-		keyFile := "./certs/ca.key"
-
-		installed, err := proxy.CheckCertInstalled(caFile)
-		if err != nil {
-			return err
-		}
-		if !installed {
-			if err := proxy.InstallCert(caFile); err != nil {
-				return err
-			}
-		}
-
-		srv, err := proxy.NewServer(caFile, keyFile)
+		srv, err := proxy.NewServer()
 		if err != nil {
 			return err
 		}
@@ -137,6 +124,11 @@ func (s *ConfigService) handleInterceptor(cfg *model.Config) error {
 		go srv.Listen(cfg.ProxyAddress)
 		s.proxyRunning = true
 	} else if !cfg.InterceptorEnabled && s.proxyRunning {
+		if s.proxyServer != nil {
+			if err := s.proxyServer.Close(); err != nil {
+				return err
+			}
+		}
 		s.proxyRunning = false
 		s.proxyServer = nil
 	}

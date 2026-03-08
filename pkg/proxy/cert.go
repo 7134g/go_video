@@ -17,21 +17,23 @@ const (
 	DefaultDomain        = "proxy.local"
 	DefaultOrganization  = "Proxy CA"
 	DefaultValidDuration = 365 * 24 * time.Hour
+	CACertFile           = "ca.crt"
+	CAKeyFile            = "ca.key"
 )
 
-func GenCA(caFile, keyFile string) error {
+func GenCA() error {
 	caData, priData, err := newCert(DefaultDomain, DefaultOrganization, DefaultValidDuration)
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(keyFile, priData, 0600); err != nil {
+	if err := os.WriteFile(CAKeyFile, priData, 0600); err != nil {
 		return err
 	}
-	return os.WriteFile(caFile, caData, 0644)
+	return os.WriteFile(CACertFile, caData, 0644)
 }
 
-func LoadCA(caFile string) (*x509.Certificate, error) {
-	data, err := os.ReadFile(caFile)
+func LoadCA() (*x509.Certificate, error) {
+	data, err := os.ReadFile(CACertFile)
 	if err != nil {
 		return nil, err
 	}
@@ -39,8 +41,8 @@ func LoadCA(caFile string) (*x509.Certificate, error) {
 	return x509.ParseCertificate(block.Bytes)
 }
 
-func LoadKey(keyFile string) (*rsa.PrivateKey, error) {
-	data, err := os.ReadFile(keyFile)
+func LoadKey() (*rsa.PrivateKey, error) {
+	data, err := os.ReadFile(CAKeyFile)
 	if err != nil {
 		return nil, err
 	}
@@ -64,8 +66,8 @@ func newCert(domain, org string, validDuration time.Duration) ([]byte, []byte, e
 	return certData.Bytes(), prvData.Bytes(), nil
 }
 
-func CheckCertInstalled(caFile string) (bool, error) {
-	ca, err := LoadCA(caFile)
+func CheckCertInstalled() (bool, error) {
+	ca, err := LoadCA()
 	if err != nil {
 		return false, err
 	}
@@ -79,18 +81,5 @@ func CheckCertInstalled(caFile string) (bool, error) {
 		return cmd.Run() == nil, nil
 	default:
 		return false, nil
-	}
-}
-
-func InstallCert(caFile string) error {
-	switch runtime.GOOS {
-	case "windows":
-		cmd := exec.Command("certutil", "-addstore", "-user", "Root", caFile)
-		return cmd.Run()
-	case "darwin":
-		cmd := exec.Command("sudo", "security", "add-trusted-cert", "-d", "-r", "trustRoot", "-k", "/Library/Keychains/System.keychain", caFile)
-		return cmd.Run()
-	default:
-		return nil
 	}
 }

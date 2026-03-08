@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 
@@ -13,14 +14,15 @@ type Server struct {
 	collector *Collector
 	detector  *VideoDetector
 	capture   *RequestCapture
+	listener  net.Listener
 }
 
-func NewServer(caFile, keyFile string) (*Server, error) {
-	ca, err := LoadCA(caFile)
+func NewServer() (*Server, error) {
+	ca, err := LoadCA()
 	if err != nil {
 		return nil, err
 	}
-	key, err := LoadKey(keyFile)
+	key, err := LoadKey()
 	if err != nil {
 		return nil, err
 	}
@@ -44,6 +46,7 @@ func NewServer(caFile, keyFile string) (*Server, error) {
 }
 
 func (s *Server) ModifyRequest(req *http.Request) error {
+	fmt.Println(req.URL.String())
 	if s.detector.IsVideo(req.URL.String()) {
 		task := s.capture.Capture(req)
 		s.collector.Collect(task)
@@ -56,7 +59,15 @@ func (s *Server) Listen(addr string) error {
 	if err != nil {
 		return err
 	}
+	s.listener = l
 	return s.proxy.Serve(l)
+}
+
+func (s *Server) Close() error {
+	if s.listener != nil {
+		return s.listener.Close()
+	}
+	return nil
 }
 
 func (s *Server) Tasks() <-chan *VideoTask {
