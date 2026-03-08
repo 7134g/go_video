@@ -28,7 +28,8 @@ func main() {
 	InitCa()
 
 	// 加载配置并应用到 controller
-	cfg := service.GetConfigService().GetConfig()
+	svr := service.GetConfigService()
+	cfg := svr.GetConfig()
 	controller.GetController().ApplyConfig(
 		cfg.DownloadDir,
 		cfg.MaxConcurrentTasks,
@@ -36,6 +37,7 @@ func main() {
 		cfg.MaxConsecutiveErrors,
 		cfg.DefaultHeaders,
 	)
+	svr.Init()
 
 	r := gin.Default()
 	gin.SetMode(gin.ReleaseMode)
@@ -80,7 +82,6 @@ func main() {
 	}()
 
 	fmt.Println("访问 http://localhost:8080")
-	fmt.Println("设置代理 http://localhost:8888")
 	_ = r.Run(":8080")
 }
 

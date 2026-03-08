@@ -1,7 +1,6 @@
 package proxy
 
 import (
-	"fmt"
 	"net"
 	"net/http"
 
@@ -46,7 +45,7 @@ func NewServer() (*Server, error) {
 }
 
 func (s *Server) ModifyRequest(req *http.Request) error {
-	fmt.Println(req.URL.String())
+	//fmt.Println(req.URL.String())
 	if s.detector.IsVideo(req.URL.String()) {
 		task := s.capture.Capture(req)
 		s.collector.Collect(task)

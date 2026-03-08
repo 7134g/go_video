@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"sync"
 
@@ -30,6 +31,13 @@ func GetConfigService() *ConfigService {
 		}
 	})
 	return configService
+}
+
+func (s *ConfigService) Init() {
+	cfg := s.repo.Get()
+	if cfg.InterceptorEnabled {
+		go s.startProxyServer(cfg.ProxyAddress)
+	}
 }
 
 func (s *ConfigService) GetConfig() *model.Config {
@@ -116,12 +124,7 @@ func (s *ConfigService) handleInterceptor(cfg *model.Config) error {
 	defer s.mu.Unlock()
 
 	if cfg.InterceptorEnabled && !s.proxyRunning {
-		srv, err := proxy.NewServer()
-		if err != nil {
-			return err
-		}
-		s.proxyServer = srv
-		go srv.Listen(cfg.ProxyAddress)
+		go s.startProxyServer(cfg.ProxyAddress)
 		s.proxyRunning = true
 	} else if !cfg.InterceptorEnabled && s.proxyRunning {
 		if s.proxyServer != nil {
@@ -134,4 +137,18 @@ func (s *ConfigService) handleInterceptor(cfg *model.Config) error {
 	}
 
 	return nil
+}
+
+func (s *ConfigService) startProxyServer(address string) {
+	fmt.Println("开启代理" + address)
+
+	srv, err := proxy.NewServer()
+	if err != nil {
+		panic(err)
+	}
+	s.proxyServer = srv
+	err = srv.Listen(address)
+	if err != nil {
+		panic(err)
+	}
 }
