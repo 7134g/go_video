@@ -148,6 +148,10 @@ func (c *DownloadController) parseM3u8(ctx context.Context, m3u8URL string, head
 			return nil
 		},
 	}
+	if c.config.HttpProxyAddress != "" {
+		proxyURL, _ := url.Parse("http://" + c.config.HttpProxyAddress)
+		client.Transport = &http.Transport{Proxy: http.ProxyURL(proxyURL)}
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, nil, err
@@ -178,6 +182,10 @@ func (c *DownloadController) downloadSegment(ctx context.Context, segURL, filena
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return nil
 		},
+	}
+	if c.config.HttpProxyAddress != "" {
+		proxyURL, _ := url.Parse("http://" + c.config.HttpProxyAddress)
+		client.Transport = &http.Transport{Proxy: http.ProxyURL(proxyURL)}
 	}
 	resp, err := client.Do(req)
 	if err != nil {

@@ -26,8 +26,11 @@
       <el-form-item label="启用拦截器">
         <el-switch v-model="form.interceptor_enabled" />
       </el-form-item>
-      <el-form-item label="代理地址">
+      <el-form-item label="拦截代理地址">
         <el-input v-model="form.proxy_address" placeholder="127.0.0.1:8888" />
+      </el-form-item>
+      <el-form-item label="HTTP代理地址">
+        <el-input v-model="form.http_proxy_address" placeholder="127.0.0.1:7890" />
       </el-form-item>
     </el-form>
     <template #footer>
@@ -56,7 +59,8 @@ const form = ref<Config>({
   max_consecutive_errors: 10,
   default_headers: {},
   interceptor_enabled: false,
-  proxy_address: '127.0.0.1:8888'
+  proxy_address: '127.0.0.1:8888',
+  http_proxy_address: ''
 })
 
 watch(() => props.modelValue, async (val) => {

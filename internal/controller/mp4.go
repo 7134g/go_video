@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 )
@@ -33,6 +34,10 @@ func (c *DownloadController) downloadMp4(task *DTask) error {
 	}
 
 	client := &http.Client{}
+	if c.config.HttpProxyAddress != "" {
+		proxyURL, _ := url.Parse("http://" + c.config.HttpProxyAddress)
+		client.Transport = &http.Transport{Proxy: http.ProxyURL(proxyURL)}
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return err

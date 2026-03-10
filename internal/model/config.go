@@ -8,6 +8,7 @@ type Config struct {
 	DefaultHeaders       map[string]string `json:"default_headers"`
 	InterceptorEnabled   bool              `json:"interceptor_enabled"`
 	ProxyAddress         string            `json:"proxy_address"`
+	HttpProxyAddress     string            `json:"http_proxy_address"`
 }
 
 func DefaultConfig() *Config {
@@ -21,5 +22,6 @@ func DefaultConfig() *Config {
 		},
 		InterceptorEnabled: false,
 		ProxyAddress:       "127.0.0.1:8888",
+		HttpProxyAddress:   "",
 	}
 }
