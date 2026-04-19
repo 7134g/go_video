@@ -79,7 +79,7 @@ func (c *DownloadController) downloadM3u8(task *DTask) error {
 			break
 		}
 
-		segFile := filepath.Join(dir, fmt.Sprintf("%05d.ts", i))
+		segFile := filepath.Join(dir, fmt.Sprintf("%06d.ts", i))
 		if _, err := os.Stat(segFile); err == nil {
 			task.Progress.SetSegment(i+1, len(segments))
 			//fmt.Printf("已存在 ---> %s\n", segFile)
