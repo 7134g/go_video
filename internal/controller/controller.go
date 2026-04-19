@@ -6,6 +6,8 @@ import (
 	"errors"
 	"go_video/internal/downloader"
 	"go_video/internal/model"
+	"go_video/internal/repository"
+	"log"
 	"net/http"
 	"os"
 	"sync"
@@ -24,6 +26,8 @@ type DownloadController struct {
 	runningCount int
 	taskQueue    chan *DTask
 	downloadPool *downloader.Pool
+
+	repo *repository.TaskRepository
 }
 
 func GetController() *DownloadController {
@@ -38,6 +42,10 @@ func GetController() *DownloadController {
 			config:       model.DefaultConfig(),
 			taskQueue:    make(chan *DTask, 100),
 			downloadPool: downloader.NewPool(model.DefaultConfig().MaxSegmentWorkers),
+			repo:         repository.NewTaskRepository(),
+		}
+		if err := downloadController.repo.ResetStatus(); err != nil {
+			panic(err)
 		}
 	})
 	return downloadController
@@ -106,7 +114,16 @@ func (c *DownloadController) PauseTask(id uint) error {
 	task, ok := c.tasks[id]
 	c.mu.RUnlock()
 	if !ok {
-		return errors.New("task not found")
+		task, err := c.repo.GetByID(id)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		if task == nil {
+			return errors.New("task not found")
+		}
+
+		_ = c.repo.UpdateStatus(task.ID, model.TaskStatusPaused)
 	}
 	task.cancel()
 	return nil

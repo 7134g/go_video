@@ -34,6 +34,11 @@ func (r *TaskRepository) GetPending() ([]model.Task, error) {
 	return tasks, err
 }
 
+func (r *TaskRepository) ResetStatus() error {
+	_db := DB.Model(&model.Task{})
+	return _db.Exec("UPDATE tasks SET status = 0 WHERE status = 1").Error
+}
+
 func (r *TaskRepository) UpdateStatus(id uint, status model.TaskStatus) error {
 	return DB.Model(&model.Task{}).Where("id = ?", id).Update("status", status).Error
 }
