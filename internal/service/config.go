@@ -35,7 +35,7 @@ func GetConfigService() *ConfigService {
 func (s *ConfigService) Init() {
 	cfg := s.repo.Get()
 	if cfg.InterceptorEnabled {
-		go s.startProxyServer(cfg.ProxyAddress)
+		go s.startProxyServer(cfg.AgentAddress, cfg.HttpProxyAddress)
 	}
 }
 
@@ -90,9 +90,9 @@ func (s *ConfigService) UpdateConfig(updates map[string]interface{}) (*model.Con
 			if v, ok := val.(bool); ok {
 				cfg.InterceptorEnabled = v
 			}
-		case "proxy_address":
+		case "agent_address":
 			if v, ok := val.(string); ok {
-				cfg.ProxyAddress = v
+				cfg.AgentAddress = v
 			}
 		}
 	}
@@ -123,7 +123,7 @@ func (s *ConfigService) handleInterceptor(cfg *model.Config) error {
 	defer s.mu.Unlock()
 
 	if cfg.InterceptorEnabled && !s.proxyRunning {
-		go s.startProxyServer(cfg.ProxyAddress)
+		go s.startProxyServer(cfg.AgentAddress, cfg.HttpProxyAddress)
 		s.proxyRunning = true
 	} else if !cfg.InterceptorEnabled && s.proxyRunning {
 		if s.proxyServer != nil {
@@ -138,10 +138,10 @@ func (s *ConfigService) handleInterceptor(cfg *model.Config) error {
 	return nil
 }
 
-func (s *ConfigService) startProxyServer(address string) {
-	fmt.Println("开启代理 -> " + address)
+func (s *ConfigService) startProxyServer(agentAddress, proxyAddress string) {
+	fmt.Println("开启代理 -> " + agentAddress)
 
-	srv, err := proxy.NewServer()
+	srv, err := proxy.NewServer(proxyAddress)
 	if err != nil {
 		fmt.Printf("代理服务器启动失败: %v\n", err)
 		s.mu.Lock()
@@ -153,7 +153,7 @@ func (s *ConfigService) startProxyServer(address string) {
 
 	go s.doTask(srv)
 
-	err = srv.Listen(address)
+	err = srv.Listen(agentAddress)
 	if err != nil {
 		fmt.Printf("代理监听失败: %v\n", err)
 		s.mu.Lock()

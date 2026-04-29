@@ -7,7 +7,7 @@ type Config struct {
 	MaxConsecutiveErrors int               `json:"max_consecutive_errors"` // 连续错误数
 	DefaultHeaders       map[string]string `json:"default_headers"`
 	InterceptorEnabled   bool              `json:"interceptor_enabled"`
-	ProxyAddress         string            `json:"proxy_address"`
+	AgentAddress         string            `json:"agent_address"`
 	HttpProxyAddress     string            `json:"http_proxy_address"`
 }
 
@@ -21,7 +21,7 @@ func DefaultConfig() *Config {
 			"user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
 		},
 		InterceptorEnabled: false,
-		ProxyAddress:       "127.0.0.1:8888",
-		HttpProxyAddress:   "",
+		AgentAddress:       "127.0.0.1:8888",
+		HttpProxyAddress:   "127.0.0.1:7890",
 	}
 }

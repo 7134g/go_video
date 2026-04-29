@@ -7,7 +7,7 @@ export interface Config {
   max_consecutive_errors: number
   default_headers: Record<string, string>
   interceptor_enabled: boolean
-  proxy_address: string
+  agent_address: string
   http_proxy_address: string
 }
 

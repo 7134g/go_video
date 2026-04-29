@@ -1,8 +1,10 @@
 package proxy
 
 import (
+	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 
 	"github.com/google/martian"
 	"github.com/google/martian/mitm"
@@ -18,7 +20,7 @@ type Server struct {
 	Stop chan bool
 }
 
-func NewServer() (*Server, error) {
+func NewServer(proxyAddress string) (*Server, error) {
 	ca, err := LoadCA()
 	if err != nil {
 		return nil, err
@@ -28,21 +30,27 @@ func NewServer() (*Server, error) {
 		return nil, err
 	}
 
-	proxy := martian.NewProxy()
+	agent := martian.NewProxy()
 	mc, err := mitm.NewConfig(ca, key)
 	if err != nil {
 		return nil, err
 	}
-	proxy.SetMITM(mc)
+	agent.SetMITM(mc)
+
+	proxyUrl, err := url.Parse(fmt.Sprintf("http://%s", proxyAddress))
+	if err != nil {
+		return nil, err
+	}
+	agent.SetDownstreamProxy(proxyUrl)
 
 	s := &Server{
-		proxy:     proxy,
+		proxy:     agent,
 		collector: NewCollector(),
 		detector:  &VideoDetector{},
 		capture:   &RequestCapture{},
 	}
 	s.Stop = make(chan bool)
-	proxy.SetRequestModifier(s)
+	agent.SetRequestModifier(s)
 	return s, nil
 }
 
