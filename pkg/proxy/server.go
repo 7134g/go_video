@@ -7,6 +7,7 @@ import (
 	"net/url"
 
 	"github.com/google/martian"
+	"github.com/google/martian/auth"
 	"github.com/google/martian/mitm"
 )
 
@@ -37,11 +38,15 @@ func NewServer(proxyAddress string) (*Server, error) {
 	}
 	agent.SetMITM(mc)
 
-	proxyUrl, err := url.Parse(fmt.Sprintf("http://%s", proxyAddress))
-	if err != nil {
-		return nil, err
+	if proxyAddress != "" {
+		address := fmt.Sprintf("http://%s", proxyAddress)
+		fmt.Println("local proxy on :" + address)
+		proxyUrl, err := url.Parse(address)
+		if err != nil {
+			return nil, err
+		}
+		agent.SetDownstreamProxy(proxyUrl)
 	}
-	agent.SetDownstreamProxy(proxyUrl)
 
 	s := &Server{
 		proxy:     agent,
@@ -51,16 +56,29 @@ func NewServer(proxyAddress string) (*Server, error) {
 	}
 	s.Stop = make(chan bool)
 	agent.SetRequestModifier(s)
+	agent.SetResponseModifier(s)
 	return s, nil
 }
 
 func (s *Server) ModifyRequest(req *http.Request) error {
-	//fmt.Println(req.URL.String())
+	fmt.Println("收到请求:", req.URL.String(), "TabID:", req.Header.Get("X-Tab-Id"))
 	if videoType, ok := s.detector.GetVideo(req.URL.String()); ok {
 		task := s.capture.Capture(req)
 		task.Type = videoType
 		s.collector.Collect(task)
 	}
+	return nil
+}
+
+func (s *Server) ModifyResponse(res *http.Response) error {
+	ctx := martian.NewContext(res.Request)
+	actx := auth.FromContext(ctx)
+
+	if actx.Error() != nil {
+		res.StatusCode = 403
+		res.Status = http.StatusText(403)
+	}
+
 	return nil
 }
 
