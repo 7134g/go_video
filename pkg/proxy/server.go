@@ -1,7 +1,10 @@
 package proxy
 
 import (
+	"bytes"
 	"fmt"
+	"go_video/pkg/m3u8"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -15,8 +18,6 @@ import (
 type Server struct {
 	proxy     *martian.Proxy
 	collector *Collector
-	detector  *VideoDetector
-	capture   *RequestCapture
 	listener  net.Listener
 
 	Stop chan bool
@@ -52,8 +53,6 @@ func NewServer(proxyAddress string) (*Server, error) {
 	s := &Server{
 		proxy:     agent,
 		collector: NewCollector(),
-		detector:  &VideoDetector{},
-		capture:   &RequestCapture{},
 	}
 	s.Stop = make(chan bool)
 	agent.SetRequestModifier(s)
@@ -72,16 +71,53 @@ func (s *Server) ModifyRequest(req *http.Request) error {
 }
 
 func (s *Server) ModifyResponse(res *http.Response) error {
+	ctx := martian.NewContext(res.Request)
+	actx := auth.FromContext(ctx)
+	tabId := res.Request.Header.Get("X-Tab-Id")
+
 	u := res.Request.URL
 	if strings.Contains(u.Host, "localhost") || strings.Contains(u.Host, "127.0.0.1") {
 		return nil
 	}
 
-	ctx := martian.NewContext(res.Request)
-	actx := auth.FromContext(ctx)
-	//tabId := res.Request.Header.Get("X-Tab-Id")
+	var body []byte
+	if res.Body != nil {
+		body, _ = io.ReadAll(res.Body)
+		res.Body = io.NopCloser(bytes.NewReader(body))
+	}
 
-	// todo 根据 tabId res.Request.URL.String(), res.Request.Header 和 res.Body 内容 记录在 WebTree 中,
+	if isHtml(res.Request) {
+		addWeb(tabId, u.String(), body, res.Request.Header)
+	}
+
+	var isVideo bool
+
+	// 判断url类型
+	videoType, ok := GetVideo(u)
+	if ok {
+		switch videoType {
+		case "mp4":
+			isVideo = true
+		case "m3u8":
+			_, err := m3u8.ParseM3u8Data(bytes.NewReader(body))
+			if err != nil {
+				fmt.Println("解析失败: ", u.String(), err, string(body))
+			} else {
+				isVideo = true
+			}
+		}
+	}
+
+	// 判断是否是视频请求
+	var isVideoUrl bool
+	if HasExactlyOneHttp(u.String()) {
+		isVideoUrl = true
+	}
+
+	if isVideo && isVideoUrl {
+		title := search(tabId)
+		s.collector.Collect(res.Request, title, videoType)
+	}
 
 	if actx.Error() != nil {
 		res.StatusCode = 403

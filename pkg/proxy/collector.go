@@ -1,5 +1,10 @@
 package proxy
 
+import (
+	"fmt"
+	"net/http"
+)
+
 type Collector struct {
 	tasks chan *VideoTask
 }
@@ -10,10 +15,14 @@ func NewCollector() *Collector {
 	}
 }
 
-func (c *Collector) Collect(task *VideoTask) {
-	if task != nil && task.Title != "" {
-		c.tasks <- task
+func (c *Collector) Collect(req *http.Request, title, videoType string) {
+	fmt.Println("抓取到新任务: ", title, req.URL.String())
+	task := Capture(req)
+	task.Type = videoType
+	if title != "" {
+		task.Title = title
 	}
+	c.tasks <- task
 }
 
 func (c *Collector) Tasks() <-chan *VideoTask {

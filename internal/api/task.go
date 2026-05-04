@@ -6,6 +6,7 @@ import (
 
 	"go_video/internal/model"
 	"go_video/internal/service"
+	"go_video/pkg/proxy"
 
 	"github.com/gin-gonic/gin"
 )
@@ -147,6 +148,33 @@ func (h *TaskHandler) StartOne(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "started"})
+}
+
+func (h *TaskHandler) UpdateTitle(c *gin.Context) {
+	var req IDReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	task, err := h.svc.GetByID(req.ID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "task not found"})
+		return
+	}
+
+	title := proxy.SearchTitle(task.URL)
+	if title == "" {
+		c.JSON(http.StatusOK, gin.H{"message": "no title found in WebTree"})
+		return
+	}
+
+	task.Name = title
+	if err := h.svc.Update(task); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, task)
 }
 
 func (h *TaskHandler) List(c *gin.Context) {

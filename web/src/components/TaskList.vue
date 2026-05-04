@@ -40,7 +40,10 @@
         </el-table-column>
         <el-table-column label="操作" width="280">
           <template #default="{ row }">
-            <el-button size="small" type="success" @click="handleStartOne(row.id)" v-if="row.status === 0 || row.status === 3 || row.status === 4">启动</el-button>
+            <div  v-if="row.status === 0 || row.status === 3 || row.status === 4">
+              <el-button size="small" type="success" @click="handleStartOne(row.id)">启动</el-button>
+              <el-button size="small" type="info" @click="handleUpdateTitle(row.id)">更新标题</el-button>
+            </div>
             <el-button size="small" @click="handleEdit(row)" v-if="row.status === 0 || row.status === 2 || row.status === 3 || row.status === 4">编辑</el-button>
             <el-button size="small" type="warning" @click="handlePause(row.id)" v-if="row.status === 1">暂停</el-button>
             <el-button size="small" type="primary" @click="handleRetry(row.id)" v-if="row.status === 3 || row.status === 4">重试</el-button>
@@ -171,6 +174,16 @@ async function handlePause(id: number) {
 async function handleRetry(id: number) {
   await taskApi.retry(id)
   ElMessage.success('任务已重新启动')
+  loadTasks()
+}
+
+async function handleUpdateTitle(id: number) {
+  const { data } = await taskApi.updateTitle(id)
+  if (data.name) {
+    ElMessage.success(`标题已更新: ${data.name}`)
+  } else {
+    ElMessage.warning('未在 WebTree 中找到匹配的标题')
+  }
   loadTasks()
 }
 
