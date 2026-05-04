@@ -79,3 +79,11 @@ func (t *TitleExtractor) Extract(resp *http.Response) string {
 	}
 	return content[start : start+end]
 }
+
+type webContent struct {
+	u      string
+	body   []byte
+	header http.Header
+}
+
+var WebTree map[string]*webContent

@@ -103,10 +103,11 @@ func (c *DownloadController) GetTask(id uint) *DTask {
 	return c.tasks[id]
 }
 
-func (c *DownloadController) RemoveTask(id uint) {
+func (c *DownloadController) RemoveTask(id uint) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	delete(c.tasks, id)
+	return nil
 }
 
 func (c *DownloadController) PauseTask(id uint) error {
@@ -129,7 +130,7 @@ func (c *DownloadController) PauseTask(id uint) error {
 	return nil
 }
 
-type TaskCallback func(id uint, err error)
+type TaskCallback func(id uint, err error) error
 
 func (c *DownloadController) StartAll(callback TaskCallback) {
 	c.mu.RLock()

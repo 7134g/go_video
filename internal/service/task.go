@@ -57,21 +57,26 @@ func (s *TaskService) StartTasks() (int, error) {
 
 	for _, t := range tasks {
 		headerJSON := mergeHeaders(cfg.DefaultHeaders, t.Header)
-		s.repo.UpdateStatus(t.ID, model.TaskStatusRunning)
-		s.ctrl.AddTask(t.ID, t.Name, t.URL, headerJSON, t.Type)
+		if err := s.repo.UpdateStatus(t.ID, model.TaskStatusRunning); err != nil {
+			return 0, err
+		}
+		if err := s.ctrl.AddTask(t.ID, t.Name, t.URL, headerJSON, t.Type); err != nil {
+			return 0, err
+		}
 	}
 
-	s.ctrl.StartAll(func(id uint, err error) {
+	s.ctrl.StartAll(func(id uint, err error) error {
+		defer s.ctrl.RemoveTask(id)
+
 		if err != nil {
 			if err == context.Canceled {
-				s.repo.UpdateStatus(id, model.TaskStatusPaused)
+				return s.repo.UpdateStatus(id, model.TaskStatusPaused)
 			} else {
-				s.repo.UpdateStatus(id, model.TaskStatusFailed)
+				return s.repo.UpdateStatus(id, model.TaskStatusFailed)
 			}
 		} else {
-			s.repo.UpdateStatus(id, model.TaskStatusCompleted)
+			return s.repo.UpdateStatus(id, model.TaskStatusCompleted)
 		}
-		s.ctrl.RemoveTask(id)
 	})
 
 	return len(tasks), nil
@@ -96,20 +101,25 @@ func (s *TaskService) RetryTask(id uint) error {
 	cfg := GetConfigService().GetConfig()
 	headerJSON := mergeHeaders(cfg.DefaultHeaders, task.Header)
 
-	s.repo.UpdateStatus(id, model.TaskStatusRunning)
-	s.ctrl.AddTask(id, task.Name, task.URL, headerJSON, task.Type)
+	if err := s.repo.UpdateStatus(id, model.TaskStatusRunning); err != nil {
+		return err
+	}
+	if err := s.ctrl.AddTask(id, task.Name, task.URL, headerJSON, task.Type); err != nil {
+		return err
+	}
 
-	s.ctrl.StartTask(id, func(tid uint, err error) {
+	s.ctrl.StartAll(func(id uint, err error) error {
+		defer s.ctrl.RemoveTask(id)
+
 		if err != nil {
 			if err == context.Canceled {
-				s.repo.UpdateStatus(tid, model.TaskStatusPaused)
+				return s.repo.UpdateStatus(id, model.TaskStatusPaused)
 			} else {
-				s.repo.UpdateStatus(tid, model.TaskStatusFailed)
+				return s.repo.UpdateStatus(id, model.TaskStatusFailed)
 			}
 		} else {
-			s.repo.UpdateStatus(tid, model.TaskStatusCompleted)
+			return s.repo.UpdateStatus(id, model.TaskStatusCompleted)
 		}
-		s.ctrl.RemoveTask(tid)
 	})
 
 	return nil
