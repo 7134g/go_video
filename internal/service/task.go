@@ -66,10 +66,12 @@ func (s *TaskService) StartTasks() (int, error) {
 	}
 
 	s.ctrl.StartAll(func(id uint, err error) error {
-		defer s.ctrl.RemoveTask(id)
+		defer func(ctrl *controller.DownloadController, id uint) {
+			_ = ctrl.RemoveTask(id)
+		}(s.ctrl, id)
 
 		if err != nil {
-			if err == context.Canceled {
+			if errors.Is(err, context.Canceled) {
 				return s.repo.UpdateStatus(id, model.TaskStatusPaused)
 			} else {
 				return s.repo.UpdateStatus(id, model.TaskStatusFailed)
@@ -83,10 +85,71 @@ func (s *TaskService) StartTasks() (int, error) {
 }
 
 func (s *TaskService) PauseTask(id uint) error {
-	if err := s.ctrl.PauseTask(id); err != nil {
+	if err := s.ctrl.StopTask(id); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (s *TaskService) StartTask(id uint) error {
+	task, err := s.repo.GetByID(id)
+	if err != nil {
+		return err
+	}
+	if task.Status != model.TaskStatusPending && task.Status != model.TaskStatusFailed && task.Status != model.TaskStatusPaused {
+		return errors.New("task is already running or completed")
+	}
+
+	cfg := GetConfigService().GetConfig()
+	headerJSON := mergeHeaders(cfg.DefaultHeaders, task.Header)
+
+	if err := s.repo.UpdateStatus(id, model.TaskStatusRunning); err != nil {
+		return err
+	}
+	if err := s.ctrl.AddTask(id, task.Name, task.URL, headerJSON, task.Type); err != nil {
+		return err
+	}
+
+	return s.ctrl.StartTask(id, func(id uint, err error) error {
+		defer func(ctrl *controller.DownloadController, id uint) {
+			_ = ctrl.RemoveTask(id)
+		}(s.ctrl, id)
+
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				return s.repo.UpdateStatus(id, model.TaskStatusPaused)
+			}
+			return s.repo.UpdateStatus(id, model.TaskStatusFailed)
+		}
+		return s.repo.UpdateStatus(id, model.TaskStatusCompleted)
+	})
+}
+
+func (s *TaskService) AddAndStart(task *model.Task) error {
+	if err := s.repo.Create(task); err != nil {
+		return err
+	}
+
+	cfg := GetConfigService().GetConfig()
+	headerJSON := mergeHeaders(cfg.DefaultHeaders, task.Header)
+
+	if err := s.repo.UpdateStatus(task.ID, model.TaskStatusRunning); err != nil {
+		return err
+	}
+
+	return s.ctrl.AddAndStart(task.ID, task.Name, task.URL, headerJSON, task.Type, func(id uint, err error) error {
+		defer func(ctrl *controller.DownloadController, id uint) {
+			_ = ctrl.RemoveTask(id)
+		}(s.ctrl, id)
+
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				return s.repo.UpdateStatus(id, model.TaskStatusPaused)
+			}
+			return s.repo.UpdateStatus(id, model.TaskStatusFailed)
+		}
+		return s.repo.UpdateStatus(id, model.TaskStatusCompleted)
+	})
 }
 
 func (s *TaskService) RetryTask(id uint) error {
@@ -109,10 +172,12 @@ func (s *TaskService) RetryTask(id uint) error {
 	}
 
 	s.ctrl.StartAll(func(id uint, err error) error {
-		defer s.ctrl.RemoveTask(id)
+		defer func(ctrl *controller.DownloadController, id uint) {
+			_ = ctrl.RemoveTask(id)
+		}(s.ctrl, id)
 
 		if err != nil {
-			if err == context.Canceled {
+			if errors.Is(err, context.Canceled) {
 				return s.repo.UpdateStatus(id, model.TaskStatusPaused)
 			} else {
 				return s.repo.UpdateStatus(id, model.TaskStatusFailed)

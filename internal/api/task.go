@@ -18,6 +18,10 @@ func NewTaskHandler() *TaskHandler {
 	return &TaskHandler{svc: service.NewTaskService()}
 }
 
+type IDReq struct {
+	ID uint `json:"id"`
+}
+
 type CreateTaskReq struct {
 	Name   string `json:"name" binding:"required"`
 	URL    string `json:"url" binding:"required"`
@@ -46,8 +50,12 @@ func (h *TaskHandler) Create(c *gin.Context) {
 }
 
 func (h *TaskHandler) Delete(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err := h.svc.Delete(uint(id)); err != nil {
+	var req IDReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.svc.Delete(req.ID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "task not found"})
 		return
 	}
@@ -55,6 +63,7 @@ func (h *TaskHandler) Delete(c *gin.Context) {
 }
 
 type UpdateTaskReq struct {
+	ID     uint   `json:"id"`
 	Name   string `json:"name"`
 	URL    string `json:"url"`
 	Header string `json:"header"`
@@ -62,16 +71,15 @@ type UpdateTaskReq struct {
 }
 
 func (h *TaskHandler) Update(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
-	task, err := h.svc.GetByID(uint(id))
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "task not found"})
-		return
-	}
-
 	var req UpdateTaskReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	task, err := h.svc.GetByID(req.ID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "task not found"})
 		return
 	}
 
@@ -103,8 +111,12 @@ func (h *TaskHandler) Start(c *gin.Context) {
 }
 
 func (h *TaskHandler) Pause(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err := h.svc.PauseTask(uint(id)); err != nil {
+	var req IDReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.svc.PauseTask(req.ID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
@@ -112,12 +124,29 @@ func (h *TaskHandler) Pause(c *gin.Context) {
 }
 
 func (h *TaskHandler) Retry(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err := h.svc.RetryTask(uint(id)); err != nil {
+	var req IDReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.svc.RetryTask(req.ID); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "retrying"})
+}
+
+func (h *TaskHandler) StartOne(c *gin.Context) {
+	var req IDReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.svc.StartTask(req.ID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "started"})
 }
 
 func (h *TaskHandler) List(c *gin.Context) {

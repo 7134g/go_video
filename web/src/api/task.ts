@@ -18,12 +18,17 @@ export interface CreateTaskReq {
   type: string
 }
 
+export interface UpdateTaskReq extends Partial<CreateTaskReq> {
+  id: number
+}
+
 export const taskApi = {
   list: (status?: number) => request.get<Task[]>('/tasks', { params: status !== undefined ? { status } : {} }),
   create: (data: CreateTaskReq) => request.post<Task>('/tasks', data),
-  update: (id: number, data: Partial<CreateTaskReq>) => request.put<Task>(`/tasks/${id}`, data),
-  delete: (id: number) => request.delete(`/tasks/${id}`),
+  update: (data: UpdateTaskReq) => request.post<Task>('/tasks/update', data),
+  delete: (id: number) => request.post('/tasks/delete', { id }),
   start: () => request.post<{ started: number }>('/tasks/start'),
-  pause: (id: number) => request.post(`/tasks/${id}/pause`),
-  retry: (id: number) => request.post(`/tasks/${id}/retry`),
+  pause: (id: number) => request.post('/tasks/pause', { id }),
+  retry: (id: number) => request.post('/tasks/retry', { id }),
+  startOne: (id: number) => request.post('/tasks/start-one', { id }),
 }

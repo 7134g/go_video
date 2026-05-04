@@ -59,7 +59,7 @@ function handleClose() {
 async function handleSubmit() {
   await formRef.value?.validate()
   if (props.task) {
-    await taskApi.update(props.task.id, form.value)
+    await taskApi.update({ id: props.task.id, ...form.value })
     ElMessage.success('更新成功')
   } else {
     await taskApi.create(form.value)

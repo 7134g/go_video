@@ -47,11 +47,12 @@ func main() {
 	{
 		tasks.GET("", h.List)
 		tasks.POST("", h.Create)
-		tasks.DELETE("/:id", h.Delete)
-		tasks.PUT("/:id", h.Update)
+		tasks.POST("/delete", h.Delete)
+		tasks.POST("/update", h.Update)
 		tasks.POST("/start", h.Start)
-		tasks.POST("/:id/pause", h.Pause)
-		tasks.POST("/:id/retry", h.Retry)
+		tasks.POST("/pause", h.Pause)
+		tasks.POST("/retry", h.Retry)
+		tasks.POST("/start-one", h.StartOne)
 		tasks.GET("/progress", api.ProgressWS)
 	}
 

@@ -22,7 +22,11 @@
 
       <el-table :data="tasks" v-loading="loading" empty-text="暂无任务">
         <el-table-column prop="name" label="名称" />
-        <el-table-column prop="url" label="URL" show-overflow-tooltip />
+        <el-table-column label="URL" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span class="url-cell" @dblclick="copyURL(row.url)">{{ row.url }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="type" label="类型" width="80" />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
@@ -34,9 +38,10 @@
             <el-progress v-if="row.status === 1" :percentage="progress[row.id] || 0" :stroke-width="10" />
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200">
+        <el-table-column label="操作" width="280">
           <template #default="{ row }">
-            <el-button size="small" @click="handleEdit(row)" :disabled="row.status === 1">编辑</el-button>
+            <el-button size="small" type="success" @click="handleStartOne(row.id)" v-if="row.status === 0 || row.status === 3 || row.status === 4">启动</el-button>
+            <el-button size="small" @click="handleEdit(row)" v-if="row.status === 0 || row.status === 2 || row.status === 3 || row.status === 4">编辑</el-button>
             <el-button size="small" type="warning" @click="handlePause(row.id)" v-if="row.status === 1">暂停</el-button>
             <el-button size="small" type="primary" @click="handleRetry(row.id)" v-if="row.status === 3 || row.status === 4">重试</el-button>
             <el-button size="small" type="danger" @click="handleDelete(row.id)">删除</el-button>
@@ -48,18 +53,34 @@
       <ConfigDialog v-model="showConfig" />
     </div>
 
-    <div class="ws-log">
-      <div class="ws-header">
-        <span>WebSocket 日志</span>
-        <el-tag :type="wsConnected ? 'success' : 'danger'" size="small">{{ wsConnected ? '已连接' : '未连接' }}</el-tag>
-        <el-button size="small" @click="wsLogs = []">清空</el-button>
-      </div>
-      <div class="ws-content" ref="logContainer">
-        <div v-for="(log, i) in wsLogs" :key="i" class="ws-line">
-          <span class="ws-time">{{ log.time }}</span>
-          <pre class="ws-data">{{ log.data }}</pre>
+    <div class="right-panel">
+      <div class="progress-panel">
+        <div class="panel-header">
+          <span>任务进度</span>
         </div>
-        <div v-if="!wsLogs.length" class="ws-empty">暂无数据</div>
+        <div class="progress-content">
+          <div v-for="t in taskProgressList" :key="t.id" class="progress-item">
+            <div class="progress-name">{{ t.name }}</div>
+            <el-progress :percentage="t.percent" :stroke-width="8" />
+            <div class="progress-segment">{{ t.segment_done }}/{{ t.segment_all }} 段</div>
+          </div>
+          <div v-if="!taskProgressList.length" class="ws-empty">暂无进行中的任务</div>
+        </div>
+      </div>
+
+      <div class="ws-log">
+        <div class="ws-header">
+          <span>WebSocket 日志</span>
+          <el-tag :type="wsConnected ? 'success' : 'danger'" size="small">{{ wsConnected ? '已连接' : '未连接' }}</el-tag>
+          <el-button size="small" @click="wsLogs = []">清空</el-button>
+        </div>
+        <div class="ws-content" ref="logContainer">
+          <div v-for="(log, i) in wsLogs" :key="i" class="ws-line">
+            <span class="ws-time">{{ log.time }}</span>
+            <pre class="ws-data">{{ log.data }}</pre>
+          </div>
+          <div v-if="!wsLogs.length" class="ws-empty">暂无数据</div>
+        </div>
       </div>
     </div>
   </div>
@@ -79,6 +100,17 @@ const showConfig = ref(false)
 const editTask = ref<Task>()
 const statusFilter = ref<number>()
 const progress = ref<Record<number, number>>({})
+interface TaskProgress {
+  id: number
+  name: string
+  type: string
+  downloaded: number
+  total: number
+  segment_done: number
+  segment_all: number
+  percent: number
+}
+const taskProgressList = ref<TaskProgress[]>([])
 const wsConnected = ref(false)
 const wsLogs = ref<{ time: string; data: string }[]>([])
 const logContainer = ref<HTMLElement>()
@@ -101,6 +133,11 @@ async function loadTasks() {
   }
 }
 
+async function copyURL(url: string) {
+  await navigator.clipboard.writeText(url)
+  ElMessage.success('URL 已复制')
+}
+
 function handleEdit(task: Task) {
   editTask.value = task
   showForm.value = true
@@ -116,6 +153,12 @@ async function handleDelete(id: number) {
 async function handleStart() {
   const { data } = await taskApi.start()
   ElMessage.success(`已启动 ${data.started} 个任务`)
+  loadTasks()
+}
+
+async function handleStartOne(id: number) {
+  await taskApi.startOne(id)
+  ElMessage.success('任务已启动')
   loadTasks()
 }
 
@@ -141,16 +184,10 @@ function connectWS() {
   }
 
   ws.onmessage = (e) => {
-    const list = JSON.parse(e.data) as Array<{
-      id: number
-      percent: number
-      segment_done: number
-      segment_all: number
-      downloaded: number
-      total: number
-    }>
+    const list = JSON.parse(e.data) as TaskProgress[]
     if (!list || list.length === 0) return
     addLog(e.data)
+    taskProgressList.value = list
     for (const item of list) {
       progress.value[item.id] = item.percent
     }
@@ -205,13 +242,14 @@ onUnmounted(() => {
   overflow-y: auto;
   box-sizing: border-box;
 }
+.url-cell { cursor: pointer; }
 .toolbar { margin-bottom: 16px; }
 
 .main-content :deep(.el-table) {
   width: 100% !important;
 }
 
-.ws-log {
+.right-panel {
   display: flex;
   flex-direction: column;
   border-left: 1px solid #dcdfe6;
@@ -222,6 +260,48 @@ onUnmounted(() => {
   bottom: 0;
   width: 33.33%;
   z-index: 1000;
+}
+.progress-panel {
+  display: flex;
+  flex-direction: column;
+  height: 50%;
+  border-bottom: 1px solid #dcdfe6;
+}
+.panel-header {
+  padding: 10px 15px;
+  background: #f5f7fa;
+  border-bottom: 1px solid #dcdfe6;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+.progress-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+.progress-item {
+  margin-bottom: 12px;
+}
+.progress-name {
+  font-size: 13px;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.progress-segment {
+  font-size: 11px;
+  color: #909399;
+  margin-top: 2px;
+}
+.ws-log {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
 }
 .ws-header {
   padding: 10px 15px;

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"go_video/internal/downloader"
 	"go_video/internal/model"
 	"go_video/internal/repository"
@@ -94,6 +95,36 @@ func (c *DownloadController) AddTask(id uint, name, url, headerJSON, taskType st
 	c.tasks[id] = task
 	c.mu.Unlock()
 
+	BroadcastMessage(id, "任务已添加: "+name)
+	return nil
+}
+
+func (c *DownloadController) AddAndStart(id uint, name, url, headerJSON, taskType string, callback TaskCallback) error {
+	header := http.Header{}
+	if headerJSON != "" {
+		if err := json.Unmarshal([]byte(headerJSON), &header); err != nil {
+			return err
+		}
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	task := &DTask{
+		ID:       id,
+		Name:     name,
+		URL:      url,
+		Header:   header,
+		Type:     TaskType(taskType),
+		Progress: &Progress{},
+		ctx:      ctx,
+		cancel:   cancel,
+	}
+
+	c.mu.Lock()
+	c.tasks[id] = task
+	c.mu.Unlock()
+
+	go c.runTask(task, callback)
+	BroadcastMessage(id, "任务已添加并启动: "+name)
 	return nil
 }
 
@@ -106,11 +137,15 @@ func (c *DownloadController) GetTask(id uint) *DTask {
 func (c *DownloadController) RemoveTask(id uint) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	task, ok := c.tasks[id]
+	if ok {
+		BroadcastMessage(id, "任务已删除: "+task.Name)
+	}
 	delete(c.tasks, id)
 	return nil
 }
 
-func (c *DownloadController) PauseTask(id uint) error {
+func (c *DownloadController) StopTask(id uint) error {
 	c.mu.RLock()
 	task, ok := c.tasks[id]
 	c.mu.RUnlock()
@@ -125,8 +160,11 @@ func (c *DownloadController) PauseTask(id uint) error {
 		}
 
 		_ = c.repo.UpdateStatus(task.ID, model.TaskStatusPaused)
+		return nil
 	}
+	name := task.Name
 	task.cancel()
+	BroadcastMessage(id, "任务已停止: "+name)
 	return nil
 }
 
@@ -140,6 +178,8 @@ func (c *DownloadController) StartAll(callback TaskCallback) {
 	}
 	maxConcurrent := c.config.MaxConcurrentTasks
 	c.mu.RUnlock()
+
+	BroadcastMessage(0, "已启动 "+fmt.Sprint(len(tasks))+" 个任务")
 
 	sem := make(chan struct{}, maxConcurrent)
 	for _, task := range tasks {
@@ -158,6 +198,7 @@ func (c *DownloadController) StartTask(id uint, callback TaskCallback) error {
 	if !ok {
 		return errors.New("task not found")
 	}
+	BroadcastMessage(id, "任务已启动: "+task.Name)
 	go c.runTask(task, callback)
 	return nil
 }
