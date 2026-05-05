@@ -224,7 +224,7 @@ func (c *DownloadController) runTask(task *DTask, callback TaskCallback) {
 		}
 	}
 	if callback != nil {
-		callback(task.ID, err)
+		_ = callback(task.ID, err)
 	}
 }
 
