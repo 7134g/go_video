@@ -8,7 +8,8 @@ type Config struct {
 	DefaultHeaders       map[string]string `json:"default_headers"`
 	InterceptorEnabled   bool              `json:"interceptor_enabled"`
 	AgentAddress         string            `json:"agent_address"`
-	HttpProxyAddress     string            `json:"http_proxy_address"`
+	VpnAddress           string            `json:"vpn_address"`
+	GinMode              string            `json:"gin_mode"`
 }
 
 func DefaultConfig() *Config {
@@ -21,7 +22,8 @@ func DefaultConfig() *Config {
 			"user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
 		},
 		InterceptorEnabled: false,
-		AgentAddress:       "127.0.0.1:8888",
-		HttpProxyAddress:   "127.0.0.1:7890",
+		AgentAddress:       "127.0.0.1:9999",
+		VpnAddress:         "127.0.0.1:7890",
+		GinMode:            "release",
 	}
 }

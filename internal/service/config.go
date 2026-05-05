@@ -35,7 +35,7 @@ func GetConfigService() *ConfigService {
 func (s *ConfigService) Init() {
 	cfg := s.repo.Get()
 	if cfg.InterceptorEnabled {
-		go s.startProxyServer(cfg.AgentAddress, cfg.HttpProxyAddress)
+		go s.startProxyServer(cfg.AgentAddress, cfg.VpnAddress)
 	}
 }
 
@@ -123,7 +123,7 @@ func (s *ConfigService) handleInterceptor(cfg *model.Config) error {
 	defer s.mu.Unlock()
 
 	if cfg.InterceptorEnabled && !s.proxyRunning {
-		go s.startProxyServer(cfg.AgentAddress, cfg.HttpProxyAddress)
+		go s.startProxyServer(cfg.AgentAddress, cfg.VpnAddress)
 		s.proxyRunning = true
 	} else if !cfg.InterceptorEnabled && s.proxyRunning {
 		if s.proxyServer != nil {
@@ -138,10 +138,10 @@ func (s *ConfigService) handleInterceptor(cfg *model.Config) error {
 	return nil
 }
 
-func (s *ConfigService) startProxyServer(agentAddress, proxyAddress string) {
-	fmt.Println("开启代理 -> " + agentAddress)
+func (s *ConfigService) startProxyServer(agentAddress, vpnAddress string) {
+	fmt.Println("开启被动代理 -> " + agentAddress)
 
-	srv, err := proxy.NewServer(proxyAddress)
+	srv, err := proxy.NewServer(vpnAddress)
 	if err != nil {
 		fmt.Printf("代理服务器启动失败: %v\n", err)
 		s.mu.Lock()

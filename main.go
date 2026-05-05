@@ -39,8 +39,9 @@ func main() {
 	)
 	svr.Init()
 
+	fmt.Println("web地址 http://localhost:8080")
 	r := gin.Default()
-	gin.SetMode(gin.ReleaseMode)
+	gin.SetMode(cfg.GinMode)
 	h := api.NewTaskHandler()
 
 	tasks := r.Group("/api/tasks")
@@ -83,7 +84,6 @@ func main() {
 		os.Exit(0)
 	}()
 
-	fmt.Println("访问 http://localhost:8080")
 	_ = r.Run(":8080")
 }
 

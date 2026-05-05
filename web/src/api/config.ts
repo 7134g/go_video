@@ -8,7 +8,7 @@ export interface Config {
   default_headers: Record<string, string>
   interceptor_enabled: boolean
   agent_address: string
-  http_proxy_address: string
+    vpn_address: string
 }
 
 export const configApi = {

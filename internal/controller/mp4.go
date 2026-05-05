@@ -34,8 +34,8 @@ func (c *DownloadController) downloadMp4(task *DTask) error {
 	}
 
 	client := &http.Client{}
-	if c.config.HttpProxyAddress != "" {
-		proxyURL, _ := url.Parse("http://" + c.config.HttpProxyAddress)
+	if c.config.VpnAddress != "" {
+		proxyURL, _ := url.Parse("http://" + c.config.VpnAddress)
 		client.Transport = &http.Transport{Proxy: http.ProxyURL(proxyURL)}
 	}
 	resp, err := client.Do(req)

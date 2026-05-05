@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"bytes"
+	"compress/gzip"
 	"fmt"
 	"go_video/pkg/m3u8"
 	"io"
@@ -13,6 +14,7 @@ import (
 	"github.com/google/martian"
 	"github.com/google/martian/auth"
 	"github.com/google/martian/mitm"
+	"github.com/klauspost/compress/zstd"
 )
 
 type Server struct {
@@ -23,7 +25,7 @@ type Server struct {
 	Stop chan bool
 }
 
-func NewServer(proxyAddress string) (*Server, error) {
+func NewServer(vpnAddress string) (*Server, error) {
 	ca, err := LoadCA()
 	if err != nil {
 		return nil, err
@@ -40,9 +42,9 @@ func NewServer(proxyAddress string) (*Server, error) {
 	}
 	agent.SetMITM(mc)
 
-	if proxyAddress != "" {
-		address := fmt.Sprintf("http://%s", proxyAddress)
-		fmt.Println("local proxy on :" + address)
+	if vpnAddress != "" {
+		address := fmt.Sprintf("http://%s", vpnAddress)
+		fmt.Println("被动代理启动vpn: " + address)
 		proxyUrl, err := url.Parse(address)
 		if err != nil {
 			return nil, err
@@ -61,12 +63,6 @@ func NewServer(proxyAddress string) (*Server, error) {
 }
 
 func (s *Server) ModifyRequest(req *http.Request) error {
-	//fmt.Println("收到请求:", req.URL.String(), "TabID:", req.Header.Get("X-Tab-Id"))
-	//if videoType, ok := s.detector.GetVideo(req.URL.String()); ok {
-	//	task := s.capture.Capture(req)
-	//	task.Type = videoType
-	//	s.collector.Collect(task)
-	//}
 	return nil
 }
 
@@ -86,12 +82,33 @@ func (s *Server) ModifyResponse(res *http.Response) error {
 		res.Body = io.NopCloser(bytes.NewReader(body))
 	}
 
-	if isHtml(res.Request) {
+	encoding := res.Header.Get("Content-Encoding")
+	switch {
+	case strings.Contains(res.Request.URL.String(), ".css"):
+	case strings.Contains(res.Request.URL.String(), ".js"):
+	case strings.Contains(res.Request.Header.Get("Sec-Fetch-Dest"), "image"):
+	case strings.Contains(res.Request.Header.Get("Content-Type"), "image"):
+	case strings.Contains(res.Request.Header.Get("Content-Type"), "jpeg"):
+	case strings.Contains(encoding, "gzip") && len(body) > 0:
+		reader, err := gzip.NewReader(bytes.NewReader(body))
+		if err != nil {
+			return err
+		}
+		defer reader.Close()
+		body, _ = io.ReadAll(reader)
+		addWeb(tabId, u.String(), body, res.Request.Header)
+	case strings.Contains(encoding, "zstd") && len(body) > 0:
+		reader, err := zstd.NewReader(bytes.NewReader(body))
+		if err != nil {
+			return err
+		}
+		body, _ = io.ReadAll(reader)
+		addWeb(tabId, u.String(), body, res.Request.Header)
+	default:
 		addWeb(tabId, u.String(), body, res.Request.Header)
 	}
 
 	var isVideo bool
-
 	// 判断url类型
 	videoType, ok := GetVideo(u)
 	if ok {

@@ -59,8 +59,8 @@ HTTP API (internal/api) → Service (internal/service) → Controller (internal/
 | `max_consecutive_errors` | 连续错误容忍数 | 10 |
 | `default_headers` | 全局默认 HTTP 请求头 | {} |
 | `interceptor_enabled` | 是否启用代理拦截 | true |
-| `agent_address` | 代理监听地址 | `127.0.0.1:8888` |
-| `http_proxy_address` | 上游 HTTP 代理地址 | `127.0.0.1:7890` |
+| `agent_address` | 代理监听地址 | `127.0.0.1:9999` |
+| `vpn_address` | 上游 HTTP 代理地址 | `127.0.0.1:7890` |
 
 
 # karpathy

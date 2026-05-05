@@ -40,14 +40,14 @@
         </el-table-column>
         <el-table-column label="操作" width="280">
           <template #default="{ row }">
-            <div  v-if="row.status === 0 || row.status === 3 || row.status === 4">
+            <div  v-if="row.status === 0">
               <el-button size="small" type="success" @click="handleStartOne(row.id)">启动</el-button>
               <el-button size="small" type="info" @click="handleUpdateTitle(row.id)">更新标题</el-button>
             </div>
             <el-button size="small" @click="handleEdit(row)" v-if="row.status === 0 || row.status === 2 || row.status === 3 || row.status === 4">编辑</el-button>
             <el-button size="small" type="warning" @click="handlePause(row.id)" v-if="row.status === 1">暂停</el-button>
             <el-button size="small" type="primary" @click="handleRetry(row.id)" v-if="row.status === 3 || row.status === 4">重试</el-button>
-            <el-button size="small" type="danger" @click="handleDelete(row.id)">删除</el-button>
+            <el-button size="small" type="danger" @click="handleDelete(row.id)" v-if="row.status !== 1">删除</el-button>
           </template>
         </el-table-column>
       </el-table>

@@ -82,14 +82,6 @@ type webContent struct {
 
 var WebTree = map[string]map[string]*webContent{}
 
-func isHtml(req *http.Request) bool {
-	if strings.Contains(req.Header.Get("Content-Type"), "text/html") {
-		return true
-	}
-
-	return strings.HasSuffix(req.URL.Path, ".html")
-}
-
 func addWeb(tabId string, u string, body []byte, header http.Header) {
 	var dat = map[string]*webContent{}
 	if v, ok := WebTree[tabId]; ok {
