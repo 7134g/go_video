@@ -177,6 +177,14 @@ func (h *TaskHandler) UpdateTitle(c *gin.Context) {
 	c.JSON(http.StatusOK, task)
 }
 
+func (h *TaskHandler) PauseAll(c *gin.Context) {
+	if err := h.svc.PauseAllTasks(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "stopped all"})
+}
+
 func (h *TaskHandler) List(c *gin.Context) {
 	statusStr := c.Query("status")
 	var tasks []model.Task

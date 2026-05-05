@@ -20,6 +20,7 @@ type DTask struct {
 	Header   http.Header
 	Type     TaskType
 	Progress *Progress
+	callback TaskCallback
 	ctx      context.Context
 	cancel   context.CancelFunc
 }

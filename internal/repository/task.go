@@ -43,6 +43,10 @@ func (r *TaskRepository) UpdateStatus(id uint, status model.TaskStatus) error {
 	return DB.Model(&model.Task{}).Where("id = ?", id).Update("status", status).Error
 }
 
+func (r *TaskRepository) UpdateAllByStatus(from, to model.TaskStatus) error {
+	return DB.Model(&model.Task{}).Where("status = ?", from).Update("status", to).Error
+}
+
 func (r *TaskRepository) GetAll() ([]model.Task, error) {
 	var tasks []model.Task
 	err := DB.Order("created_at desc").Find(&tasks).Error

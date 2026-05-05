@@ -31,5 +31,6 @@ export const taskApi = {
   pause: (id: number) => request.post('/tasks/pause', { id }),
   retry: (id: number) => request.post('/tasks/retry', { id }),
   startOne: (id: number) => request.post('/tasks/start-one', { id }),
+  stopAll: () => request.post('/tasks/stop-all'),
   updateTitle: (id: number) => request.post<Task>('/tasks/update-title', { id }),
 }

@@ -5,6 +5,7 @@
         <el-button type="primary" @click="loadTasks">刷新</el-button>
         <el-button type="primary" @click="showForm = true">新建任务</el-button>
         <el-button type="success" @click="handleStart">开始下载</el-button>
+        <el-button type="warning" @click="handleStopAll">暂停全部</el-button>
       </div>
 
       <div>
@@ -174,6 +175,13 @@ async function handlePause(id: number) {
 async function handleRetry(id: number) {
   await taskApi.retry(id)
   ElMessage.success('任务已重新启动')
+  loadTasks()
+}
+
+async function handleStopAll() {
+  await ElMessageBox.confirm('确定暂停所有进行中的任务？', '提示')
+  await taskApi.stopAll()
+  ElMessage.success('已停止所有任务')
   loadTasks()
 }
 

@@ -24,7 +24,6 @@ type DownloadController struct {
 	tasks        map[uint]*DTask
 	pwd          string
 	config       *model.Config
-	runningCount int
 	taskQueue    chan *DTask
 	downloadPool *downloader.Pool
 	taskSem      chan struct{}
@@ -51,6 +50,7 @@ func GetController() *DownloadController {
 		if err := downloadController.repo.ResetStatus(); err != nil {
 			panic(err)
 		}
+		go downloadController.dispatch()
 	})
 	return downloadController
 }
@@ -127,7 +127,8 @@ func (c *DownloadController) AddAndStart(id uint, name, url, headerJSON, taskTyp
 	c.tasks[id] = task
 	c.mu.Unlock()
 
-	go c.runTask(task, callback)
+	task.callback = callback
+	c.taskQueue <- task
 	BroadcastMessage(id, "任务已添加并启动: "+name)
 	return nil
 }
@@ -172,6 +173,32 @@ func (c *DownloadController) StopTask(id uint) error {
 	return nil
 }
 
+func (c *DownloadController) StopAll() {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	for _, t := range c.tasks {
+		t.cancel()
+	}
+	BroadcastMessage(0, "已停止所有任务")
+}
+
+func (c *DownloadController) dispatch() {
+	for task := range c.taskQueue {
+		c.taskSem <- struct{}{}
+		go func(t *DTask) {
+			defer func() { <-c.taskSem }()
+			select {
+			case <-t.ctx.Done():
+				if t.callback != nil {
+					_ = t.callback(t.ID, context.Canceled)
+				}
+			default:
+				c.runTask(t, t.callback)
+			}
+		}(task)
+	}
+}
+
 type TaskCallback func(id uint, err error) error
 
 func (c *DownloadController) StartAll(callback TaskCallback) {
@@ -185,11 +212,8 @@ func (c *DownloadController) StartAll(callback TaskCallback) {
 	BroadcastMessage(0, "已启动 "+fmt.Sprint(len(tasks))+" 个任务")
 
 	for _, task := range tasks {
-		go func(t *DTask) {
-			c.taskSem <- struct{}{}
-			defer func() { <-c.taskSem }()
-			c.runTask(t, callback)
-		}(task)
+		task.callback = callback
+		c.taskQueue <- task
 	}
 }
 
@@ -201,11 +225,8 @@ func (c *DownloadController) StartTask(id uint, callback TaskCallback) error {
 		return errors.New("task not found")
 	}
 	BroadcastMessage(id, "任务已启动: "+task.Name)
-	go func() {
-		c.taskSem <- struct{}{}
-		defer func() { <-c.taskSem }()
-		c.runTask(task, callback)
-	}()
+	task.callback = callback
+	c.taskQueue <- task
 	return nil
 }
 

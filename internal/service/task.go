@@ -91,6 +91,11 @@ func (s *TaskService) PauseTask(id uint) error {
 	return nil
 }
 
+func (s *TaskService) PauseAllTasks() error {
+	s.ctrl.StopAll()
+	return s.repo.UpdateAllByStatus(model.TaskStatusRunning, model.TaskStatusPaused)
+}
+
 func (s *TaskService) StartTask(id uint) error {
 	task, err := s.repo.GetByID(id)
 	if err != nil {

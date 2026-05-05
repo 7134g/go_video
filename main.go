@@ -58,6 +58,7 @@ func main() {
 		tasks.POST("/pause", h.Pause)
 		tasks.POST("/retry", h.Retry)
 		tasks.POST("/start-one", h.StartOne)
+		tasks.POST("/stop-all", h.PauseAll)
 		tasks.POST("/update-title", h.UpdateTitle)
 		tasks.GET("/progress", api.ProgressWS)
 	}
