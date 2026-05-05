@@ -41,7 +41,11 @@ func main() {
 
 	fmt.Println("web地址 http://localhost:8080")
 	r := gin.Default()
-	gin.SetMode(cfg.GinMode)
+	if cfg.GinMode == "" {
+		gin.SetMode(gin.ReleaseMode)
+	} else {
+		gin.SetMode(gin.DebugMode)
+	}
 	h := api.NewTaskHandler()
 
 	tasks := r.Group("/api/tasks")
