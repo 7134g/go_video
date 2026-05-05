@@ -27,6 +27,7 @@ type DownloadController struct {
 	runningCount int
 	taskQueue    chan *DTask
 	downloadPool *downloader.Pool
+	taskSem      chan struct{}
 
 	repo *repository.TaskRepository
 }
@@ -37,12 +38,14 @@ func GetController() *DownloadController {
 		if err != nil {
 			panic(err)
 		}
+		cfg := model.DefaultConfig()
 		downloadController = &DownloadController{
 			tasks:        make(map[uint]*DTask),
 			pwd:          dirPwd,
-			config:       model.DefaultConfig(),
+			config:       cfg,
 			taskQueue:    make(chan *DTask, 100),
-			downloadPool: downloader.NewPool(model.DefaultConfig().MaxSegmentWorkers),
+			downloadPool: downloader.NewPool(cfg.MaxSegmentWorkers),
+			taskSem:      make(chan struct{}, cfg.MaxConcurrentTasks),
 			repo:         repository.NewTaskRepository(),
 		}
 		if err := downloadController.repo.ResetStatus(); err != nil {
@@ -64,6 +67,7 @@ func (c *DownloadController) ApplyConfig(downloadDir string, maxConcurrent, maxS
 	c.config.MaxConsecutiveErrors = maxErrors
 	c.config.DefaultHeaders = defaultHeaders
 	c.downloadPool = downloader.NewPool(maxSegment)
+	c.taskSem = make(chan struct{}, maxConcurrent)
 	c.mu.Unlock()
 }
 
@@ -176,16 +180,14 @@ func (c *DownloadController) StartAll(callback TaskCallback) {
 	for _, t := range c.tasks {
 		tasks = append(tasks, t)
 	}
-	maxConcurrent := c.config.MaxConcurrentTasks
 	c.mu.RUnlock()
 
 	BroadcastMessage(0, "已启动 "+fmt.Sprint(len(tasks))+" 个任务")
 
-	sem := make(chan struct{}, maxConcurrent)
 	for _, task := range tasks {
-		sem <- struct{}{}
 		go func(t *DTask) {
-			defer func() { <-sem }()
+			c.taskSem <- struct{}{}
+			defer func() { <-c.taskSem }()
 			c.runTask(t, callback)
 		}(task)
 	}
@@ -199,7 +201,11 @@ func (c *DownloadController) StartTask(id uint, callback TaskCallback) error {
 		return errors.New("task not found")
 	}
 	BroadcastMessage(id, "任务已启动: "+task.Name)
-	go c.runTask(task, callback)
+	go func() {
+		c.taskSem <- struct{}{}
+		defer func() { <-c.taskSem }()
+		c.runTask(task, callback)
+	}()
 	return nil
 }
 

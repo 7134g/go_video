@@ -197,12 +197,14 @@ function connectWS() {
   }
 
   ws.onmessage = (e) => {
-    const list = JSON.parse(e.data) as TaskProgress[]
-    if (!list || list.length === 0) return
+    const data = JSON.parse(e.data)
+    if (!data) return
     addLog(e.data)
-    taskProgressList.value = list
-    for (const item of list) {
-      progress.value[item.id] = item.percent
+    if (Array.isArray(data)) {
+      taskProgressList.value = data as TaskProgress[]
+      for (const item of data) {
+        progress.value[item.id] = item.percent
+      }
     }
   }
 
