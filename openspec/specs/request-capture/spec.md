@@ -5,11 +5,11 @@
 
 #### Scenario: 捕获视频请求
 - **WHEN** 检测到视频URL
-- **THEN** 系统捕获URL、方法、所有请求头和请求体
+- **THEN** 系统捕获URL、方法、请求头（JSON字符串格式）和请求体
 
-### Requirement: 保存请求头用于下载
-系统必须将所有HTTP请求头存储为键值对。
+### Requirement: 请求头序列化
+系统必须将 HTTP 请求头以 `http.Header`（map[string][]string）格式读取，JSON 序列化为字符串后存储。
 
 #### Scenario: 存储请求头
 - **WHEN** 捕获请求时
-- **THEN** 所有请求头以map[string]string格式存储
+- **THEN** 请求头通过 `json.Marshal` 序列化为 JSON 字符串存入 VideoTask.Headers 字段
