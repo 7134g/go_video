@@ -1,5 +1,7 @@
 package model
 
+import "github.com/gin-gonic/gin"
+
 type Config struct {
 	MaxConcurrentTasks   int               `json:"max_concurrent_tasks"` // 并发任务数
 	MaxSegmentWorkers    int               `json:"max_segment_workers"`  // 并发分片数
@@ -24,6 +26,6 @@ func DefaultConfig() *Config {
 		InterceptorEnabled: false,
 		AgentAddress:       "127.0.0.1:9999",
 		VpnAddress:         "127.0.0.1:7890",
-		GinMode:            "release",
+		GinMode:            gin.ReleaseMode,
 	}
 }
