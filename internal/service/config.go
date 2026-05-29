@@ -39,8 +39,26 @@ func (s *ConfigService) Init() {
 	}
 }
 
+// Shutdown 在进程退出前关闭 MITM 代理（如已开启）。
+func (s *ConfigService) Shutdown() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.proxyServer != nil {
+		_ = s.proxyServer.Close()
+		s.proxyServer = nil
+		s.proxyRunning = false
+	}
+}
+
 func (s *ConfigService) GetConfig() *model.Config {
 	return s.repo.Get()
+}
+
+// SetFfmpegPromptDeclined 持久化“用户拒绝下载 ffmpeg”的选择，启动时据此跳过追问。
+func (s *ConfigService) SetFfmpegPromptDeclined(v bool) error {
+	cfg := s.repo.Get()
+	cfg.FfmpegPromptDeclined = v
+	return s.repo.Save(cfg)
 }
 
 func (s *ConfigService) UpdateConfig(updates map[string]interface{}) (*model.Config, error) {
@@ -163,15 +181,13 @@ func (s *ConfigService) startProxyServer(agentAddress, vpnAddress string) {
 }
 
 func (s *ConfigService) doTask(srv *proxy.Server) {
+	repo := repository.NewTaskRepository()
 	for {
 		select {
 		case t := <-srv.Tasks():
-			//fmt.Println("=============>", t.Title, t.URL)
-			repo := repository.NewTaskRepository()
 			existing, err := repo.GetByURL(t.URL)
-			if err == nil && existing.Status != model.TaskStatusRunning && existing.CreatedAt.After(t.CreateAt) {
-				_ = repo.UpdateNameAndHeader(existing.ID, t.Title, t.Headers)
-			} else if err != nil {
+			switch {
+			case repository.IsNotFound(err):
 				_ = repo.Create(&model.Task{
 					Name:      t.Title,
 					URL:       t.URL,
@@ -179,6 +195,13 @@ func (s *ConfigService) doTask(srv *proxy.Server) {
 					Type:      t.Type,
 					CreatedAt: t.CreateAt,
 				})
+			case err == nil:
+				// 已存在：只在新捕获更晚、且不在跑的情况下刷新名称和 Header。
+				if existing.Status != model.TaskStatusRunning && t.CreateAt.After(existing.UpdatedAt) {
+					_ = repo.UpdateNameAndHeader(existing.ID, t.Title, t.Headers)
+				}
+			default:
+				fmt.Printf("代理任务查重失败: %v\n", err)
 			}
 
 		case <-srv.Stop:

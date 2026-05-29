@@ -9,38 +9,28 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 )
 
-// HasExactlyOneHttp 检查字符串中是否只包含 1 个 http 或 https
+// HasExactlyOneHttp 仅当字符串中恰好出现一次 http(s):// 时返回 true。
+// 用于过滤埋点/跳转链接里嵌套了第二个 URL 的伪视频地址。
 func HasExactlyOneHttp(input string) bool {
-	// 定义正则：h开头，接 tt，接 p 或 ps，接 ://
-	// \b 可以确保匹配单词边界，防止类似 "shhttps://" 的干扰
 	re := regexp.MustCompile(`https?://`)
-
-	// FindAllString 返回所有匹配的子串，-1 表示匹配所有
-	matches := re.FindAllString(input, -1)
-
-	// 如果匹配到的切片长度为 1，则返回 true
-	return len(matches) == 1
+	return len(re.FindAllString(input, -1)) == 1
 }
 
 func GetVideo(u *url.URL) (string, bool) {
-
-	path := u.Path
-	if strings.HasSuffix(path, ".m3u8") {
+	switch {
+	case strings.HasSuffix(u.Path, ".m3u8"):
 		return "m3u8", true
-	}
-	if strings.HasSuffix(path, ".mp4") {
+	case strings.HasSuffix(u.Path, ".mp4"):
 		return "mp4", true
-
 	}
-
 	return "", false
 }
 
 func Capture(req *http.Request) *VideoTask {
-
 	headers, _ := json.Marshal(req.Header)
 
 	var body []byte
@@ -66,66 +56,88 @@ func extractTitleFromHTML(body []byte) string {
 	if start == -1 {
 		return ""
 	}
-	start += 7
+	start += len("<title>")
 	end := strings.Index(content[start:], "</title>")
 	if end == -1 {
 		return ""
 	}
-	return content[start : start+end]
+	return strings.TrimSpace(content[start : start+end])
 }
 
-type webContent struct {
-	u      string
-	body   []byte
-	header http.Header
+// webIndex 用于按浏览器 Tab 维度缓存"看到过的 URL"和"该 Tab 内出现过的 HTML 标题"。
+// 视频任务命名来自这里：捕获到视频 URL 时取该 Tab 最近的标题作为任务名。
+// 设计上：
+//   - 只保留 HTML 中提取到的标题，不存原始 body（避免内存膨胀）
+//   - 通过 maxTabs LRU 限容，避免长跑代理占用无界内存
+//   - 全部访问串行化（sync.Mutex），消除原全局 map 的并发崩溃
+type webIndex struct {
+	mu      sync.Mutex
+	tabs    map[string]*tabEntry
+	order   []string // 进入顺序，便于 LRU 淘汰
+	maxTabs int
 }
 
-var WebTree = map[string]map[string]*webContent{}
-
-func addWeb(tabId string, u string, body []byte, header http.Header) {
-	var dat = map[string]*webContent{}
-	if v, ok := WebTree[tabId]; ok {
-		dat = v
-	}
-
-	dat[u] = &webContent{
-		u:      u,
-		body:   body,
-		header: header.Clone(),
-	}
-
-	WebTree[tabId] = dat
+type tabEntry struct {
+	urls      map[string]struct{}
+	lastTitle string
 }
 
-func search(tabId string) string {
-	var dat = map[string]*webContent{}
-	if v, ok := WebTree[tabId]; ok {
-		dat = v
+func newWebIndex(maxTabs int) *webIndex {
+	return &webIndex{
+		tabs:    make(map[string]*tabEntry),
+		maxTabs: maxTabs,
 	}
+}
 
-	for _, v := range dat {
-		title := extractTitleFromHTML(v.body)
-		if title != "" {
-			return title
+func (w *webIndex) record(tabId, rawURL string, body []byte) {
+	if tabId == "" {
+		return
+	}
+	title := extractTitleFromHTML(body)
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	t, ok := w.tabs[tabId]
+	if !ok {
+		if len(w.tabs) >= w.maxTabs {
+			oldest := w.order[0]
+			w.order = w.order[1:]
+			delete(w.tabs, oldest)
 		}
+		t = &tabEntry{urls: make(map[string]struct{})}
+		w.tabs[tabId] = t
+		w.order = append(w.order, tabId)
 	}
+	t.urls[rawURL] = struct{}{}
+	if title != "" {
+		t.lastTitle = title
+	}
+}
 
+func (w *webIndex) titleByTab(tabId string) string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if t, ok := w.tabs[tabId]; ok {
+		return t.lastTitle
+	}
 	return ""
 }
 
-func SearchTitle(rawURL string) string {
-	var tabId string
-	for s, m := range WebTree {
-		for _, v := range m {
-			if v.u == rawURL {
-				tabId = s
-			}
+func (w *webIndex) titleByURL(rawURL string) string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	for _, t := range w.tabs {
+		if _, ok := t.urls[rawURL]; ok {
+			return t.lastTitle
 		}
 	}
-
-	if tabId == "" {
-		return ""
-	}
-
-	return search(tabId)
+	return ""
 }
+
+// 包级单例：上限 64 个 Tab 足够桌面浏览场景。
+var defaultIndex = newWebIndex(64)
+
+func addWeb(tabId, rawURL string, body []byte) { defaultIndex.record(tabId, rawURL, body) }
+func search(tabId string) string               { return defaultIndex.titleByTab(tabId) }
+func SearchTitle(rawURL string) string         { return defaultIndex.titleByURL(rawURL) }

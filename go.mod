@@ -9,6 +9,7 @@ require (
 	github.com/google/martian v2.1.0+incompatible
 	github.com/gorilla/websocket v1.5.1
 	github.com/klauspost/compress v1.18.6
+	github.com/yapingcat/gomedia v0.0.0-20240906162731-17feea57090c
 	golang.org/x/sys v0.38.0
 	gorm.io/driver/sqlite v1.5.4
 	gorm.io/gorm v1.25.5

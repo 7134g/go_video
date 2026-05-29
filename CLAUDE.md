@@ -5,12 +5,19 @@
 ## 构建 / 运行
 
 ```bash
-go build . && ./go_video          # 主程序（在 :8080 提供 Web 界面）
-go build ./cmd/proxy && ./proxy   # CA 证书安装工具（需管理员权限）
-go test ./...                     # 运行所有测试
+# 开发：前后端分离
+cd web && npm run dev             # Vite 开发服务器，将 /api 和 WebSocket 反代到 :8080（见 web/vite.config.ts）
+go build . && ./go_video          # 主程序（在 :8080 提供嵌入的 Vue SPA + API）
+
+# 一次性发布构建（Windows 目标，产物在 build/）：web 构建 + 主程序 + 证书安装器 + 拷贝 ffmpeg.exe
+./build.sh
+
+# 其他常用命令
+go build ./cmd/proxy && ./proxy   # CA 证书安装工具（cmd/proxy 仅 Windows，依赖 golang.org/x/sys/windows；需管理员权限）
+go test ./...                     # 运行所有测试（主要在 pkg/m3u8/）
 ```
 
-前端位于 `web/`（Vue + Element Plus + Vite），通过 `//go:embed web/dist` 嵌入到 Go 二进制文件中。构建 Go 二进制之前，需先在 `web/` 下执行 `npm run build` 构建前端。
+前端位于 `web/`（Vue 3 + Element Plus + Vite + TypeScript），通过 `//go:embed web/dist` 嵌入到 Go 二进制文件中。`web/dist` 在 `.gitignore` 中，构建 Go 二进制前必须先 `npm run build`，否则 `embed` 失败。
 
 ## 架构
 
@@ -24,17 +31,17 @@ HTTP API (internal/api) → Service (internal/service) → Controller (internal/
 
 - **`internal/api/`** — Gin HTTP 处理器：任务增删改查、配置获取/更新、WebSocket 进度推送。
 - **`internal/service/`** — `TaskService` 连接 API 与控制器（管理生命周期和 Header 合并）。`ConfigService` 管理应用配置和 MITM 代理生命周期。
-- **`internal/controller/`** — 单例 `DownloadController`，持有内存中的任务表，调度 m3u8/mp4 下载，跟踪进度，并向 WebSocket 监听者广播进度消息。
+- **`internal/controller/`** — 单例 `DownloadController`，持有内存中的任务表；通过缓冲 channel `taskQueue` 派发任务，`taskSem` 信号量按 `MaxConcurrentTasks` 限流；调度 m3u8/mp4 下载，跟踪进度，并向 WebSocket 监听者广播消息。
 - **`internal/repository/`** — 通过 GORM/SQLite 持久化任务，通过 JSON 文件（`config.json`）持久化配置。
 - **`internal/downloader/`** — `Pool` 基于信号量的 `Group` 机制，按域名限制并发下载数。
 - **`pkg/m3u8/`** — M3U8 播放列表解析器（支持主播放列表、AES-128 密钥、字节范围），AES-128-CBC 解密，IV 推导，密钥缓存，以及 ffmpeg 合并。
-- **`pkg/proxy/`** — 基于 `github.com/google/martian` 的 HTTPS MITM 代理。`Server.ModifyRequest` 拦截每个请求；`VideoDetector` 匹配 `.m3u8`/`.mp4` URL；捕获到的任务通过 channel 传给 `ConfigService.doTask` 进行持久化。
+- **`pkg/proxy/`** — 基于 `github.com/google/martian` 的 HTTPS MITM 代理。`Server.ModifyResponse` 拦截每个响应并按 `Content-Encoding` 解压（gzip / zstd），`GetVideo` 通过 URL 后缀（`.m3u8` / `.mp4`）识别视频；命中后经 `Collector` 投递到 channel，由 `ConfigService.doTask` 去重持久化。HTML 响应额外存入全局 `WebTree`（按 `X-Tab-Id` 分桶），供后续提取 `<title>` 作为任务名。
 - **`cmd/proxy/`** — 独立的 CA 证书安装工具。
 
 ### 启动流程
 
 1. `repository.InitDB()` — 打开 SQLite 并自动迁移 `Task` 表
-2. `InitCa()` — 检查 CA 证书是否已安装到系统信任存储区（未安装则 panic）
+2. `InitCa()` — 检查 CA 证书（`ca.crt`）是否已安装到系统信任存储区（Windows: `certutil -verifystore Root`；macOS: `security find-certificate`），未安装则 **panic**。`cmd/proxy` 安装器目前仅 Windows 实现；macOS 需手动 `security add-trusted-cert` 或借助 `proxy.InstallCert`。
 3. 从 `config.json` 加载配置，应用到 `DownloadController`
 4. 若 `interceptor_enabled` 为 true，在 goroutine 中启动 MITM 代理
 5. Gin 服务器在 `:8080` 启动，提供嵌入的 Vue SPA 和 API 路由
@@ -46,21 +53,25 @@ HTTP API (internal/api) → Service (internal/service) → Controller (internal/
 - **M3U8 断点续传**：跳过磁盘上已存在的分段文件。
 - **并发控制**：任务级并发由 `MaxConcurrentTasks` 控制；分段级并发由 `MaxSegmentWorkers` 按域名限制。
 - **代理任务去重**：`doTask` 在插入前检查 URL 是否已存在；若已存在但任务更新，则更新名称和 Header。
-- **`pkg/m3u8/m3u8.go`** 中包含一个旧的本地 `parse()` 函数；实际使用的是 `method.go` 中的 `ParseM3u8Data`。
-- **ffmpeg**：项目根目录下的 `ffmpeg.exe` 用于合并 M3U8 分段文件，下载完成后自动调用。
+- **`HasExactlyOneHttp` 过滤**：MITM 仅捕获字符串中恰好包含一个 `http(s)://` 的 URL — 用于排除埋点像素 / 跳转链接里嵌套的次级 URL。
+- **WebTree / `X-Tab-Id`**：MITM 按 `X-Tab-Id` 请求头分桶记录每个 Tab 出现过的 URL，并从 HTML 响应中即时提取 `<title>` 后只保留标题字符串（不缓存 body），整体由 `sync.Mutex` 串行化、按 LRU 限容（默认 64 个 Tab）。`POST /api/tasks/update-title` 复用此缓存重新刷新已有任务的名称。
+- **任务状态枚举** (`model.TaskStatus`)：Pending=0, Running=1, Completed=2, Failed=3, Paused=4。启动时 `repo.ResetStatus()` 会把残留的 Running 置回 Pending。
+- **ffmpeg**：合并 M3U8 分段优先使用**纯 Go** remux（`pkg/m3u8/remux.go` 的 `MergeFilesNative`，基于 `github.com/yapingcat/gomedia` 做 TS→MP4 容器转换，不依赖外部二进制）；失败时自动回退到项目根目录下的 `ffmpeg` 二进制（`MergeFilesFfmpeg`）。若 ffmpeg 也不存在则提示用户下载到当前目录。
 
 ### 配置项（config.json）
 
 | 字段 | 说明 | 默认值 |
 |------|------|--------|
 | `max_concurrent_tasks` | 最大并行任务数 | 3 |
-| `max_segment_workers` | 每域名最大分段下载并发 | 10 |
+| `max_segment_workers` | 每域名最大分段下载并发 | 5 |
 | `download_dir` | 下载目录 | `./downloads` |
 | `max_consecutive_errors` | 连续错误容忍数 | 10 |
-| `default_headers` | 全局默认 HTTP 请求头 | {} |
-| `interceptor_enabled` | 是否启用代理拦截 | true |
+| `default_headers` | 全局默认 HTTP 请求头 | 预置 `user_agent`（Chrome UA） |
+| `interceptor_enabled` | 是否启用代理拦截 | false |
 | `agent_address` | 代理监听地址 | `127.0.0.1:9999` |
 | `vpn_address` | 上游 HTTP 代理地址 | `127.0.0.1:7890` |
+| `gin_mode` | Gin 框架模式（main.go: 空字符串走 release，非空走 debug） | `release` |
+| `ffmpeg_prompt_declined` | 用户已拒绝启动时下载 ffmpeg，置 true 后不再追问 | false |
 
 
 # karpathy

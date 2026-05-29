@@ -53,10 +53,12 @@ func pkcs7Unpad(data []byte) ([]byte, error) {
 	return data[:len(data)-padding], nil
 }
 
-// ParseIV 解析 IV 字符串，支持 0x 前缀的十六进制格式
+// ParseIV 返回该分段的 16 字节 IV：
+//   - 当 #EXT-X-KEY 显式指定 IV（hex，可带 0x 前缀）时按显式值
+//   - 否则按 HLS RFC 8216 §4.3.2.5 默认推导：IV = 大端 64 位的 segment 序号
+//     （高 8 字节为 0，低 8 字节为 mediaSequence + 段内索引）
 func ParseIV(ivStr string, segmentIndex uint64) ([]byte, error) {
 	if ivStr == "" {
-		// 默认使用 segment 序号作为 IV
 		iv := make([]byte, 16)
 		for i := 15; i >= 8; i-- {
 			iv[i] = byte(segmentIndex)
@@ -65,7 +67,6 @@ func ParseIV(ivStr string, segmentIndex uint64) ([]byte, error) {
 		return iv, nil
 	}
 
-	// 移除 0x 前缀
 	if len(ivStr) >= 2 && ivStr[:2] == "0x" {
 		ivStr = ivStr[2:]
 	}

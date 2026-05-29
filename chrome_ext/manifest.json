@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "go_video tab tagger",
+  "version": "1.0.0",
+  "description": "为每个浏览器 tab 注入 X-Tab-Id 请求头,供 go_video MITM 代理识别 tab 来源",
+  "permissions": ["declarativeNetRequest", "tabs", "proxy", "storage"],
+  "host_permissions": ["<all_urls>"],
+  "background": { "service_worker": "background.js" },
+  "options_page": "options.html"
+}

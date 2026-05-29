@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>go_video tab tagger 设置</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; padding: 24px; max-width: 480px; color: #222; }
+    h1 { font-size: 18px; margin: 0 0 16px; }
+    label { display: block; margin: 12px 0; }
+    input[type="text"], input[type="number"] { width: 200px; padding: 4px 6px; font-size: 13px; }
+    .row { display: flex; align-items: center; gap: 8px; }
+    .stat { margin-top: 20px; color: #666; font-size: 13px; }
+    button { margin-top: 16px; padding: 6px 18px; cursor: pointer; }
+    #msg { color: #2a8; margin-left: 12px; font-size: 13px; }
+    .hint { color: #888; font-size: 12px; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <h1>go_video tab tagger</h1>
+
+  <label class="row">
+    <input type="checkbox" id="proxyEnabled">
+    <span>接管 Chrome 浏览器代理</span>
+  </label>
+  <div class="hint">关闭时,需自行通过系统代理 / SwitchyOmega 等指向下方地址,扩展才能让 MITM 捕获生效。</div>
+
+  <label>
+    代理主机
+    <input type="text" id="proxyHost" placeholder="127.0.0.1">
+  </label>
+
+  <label>
+    代理端口
+    <input type="number" id="proxyPort" placeholder="9999" min="1" max="65535">
+  </label>
+
+  <div>
+    <button id="save">保存</button>
+    <span id="msg"></span>
+  </div>
+
+  <div class="stat">
+    当前正在为 <span id="ruleCount">-</span> 个 tab 注入 X-Tab-Id 请求头
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

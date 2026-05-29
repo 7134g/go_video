@@ -12,6 +12,7 @@ type Config struct {
 	AgentAddress         string            `json:"agent_address"`
 	VpnAddress           string            `json:"vpn_address"`
 	GinMode              string            `json:"gin_mode"`
+	FfmpegPromptDeclined bool              `json:"ffmpeg_prompt_declined"` // 用户已拒绝下载 ffmpeg，启动时不再追问
 }
 
 func DefaultConfig() *Config {

@@ -4,13 +4,25 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
-	"path/filepath"
 )
 
+// progressReader 包装 io.Reader，把读取的字节数累加到任务进度上。
+type progressReader struct {
+	r io.Reader
+	p *Progress
+}
+
+func (pr *progressReader) Read(buf []byte) (int, error) {
+	n, err := pr.r.Read(buf)
+	if n > 0 {
+		pr.p.AddDownloaded(int64(n))
+	}
+	return n, err
+}
+
 func (c *DownloadController) downloadMp4(task *DTask) error {
-	filename := filepath.Join(c.config.DownloadDir, task.Name+".mp4")
+	filename := safeJoin(c.config.DownloadDir, task.Name) + ".mp4"
 
 	var localSize int64 = 0
 	if info, err := os.Stat(filename); err == nil {
@@ -33,12 +45,7 @@ func (c *DownloadController) downloadMp4(task *DTask) error {
 		req.Header.Set("Range", fmt.Sprintf("bytes=%d-", localSize))
 	}
 
-	client := &http.Client{}
-	if c.config.VpnAddress != "" {
-		proxyURL, _ := url.Parse("http://" + c.config.VpnAddress)
-		client.Transport = &http.Transport{Proxy: http.ProxyURL(proxyURL)}
-	}
-	resp, err := client.Do(req)
+	resp, err := c.httpClient.Get().Do(req)
 	if err != nil {
 		return err
 	}
@@ -69,19 +76,6 @@ func (c *DownloadController) downloadMp4(task *DTask) error {
 	}
 	defer file.Close()
 
-	buf := make([]byte, 32*1024)
-	for {
-		n, err := resp.Body.Read(buf)
-		if n > 0 {
-			file.Write(buf[:n])
-			task.Progress.AddDownloaded(int64(n))
-		}
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	_, err = io.Copy(file, &progressReader{r: resp.Body, p: task.Progress})
+	return err
 }

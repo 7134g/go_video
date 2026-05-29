@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/google/martian"
 	"github.com/google/martian/auth"
@@ -17,12 +18,19 @@ import (
 	"github.com/klauspost/compress/zstd"
 )
 
+// Server 是一个 HTTPS MITM 代理：
+//   - 用 martian + 自签 CA 解 TLS
+//   - ModifyResponse 中嗅探 .m3u8/.mp4，命中后通过 Collector 投递视频任务
+//   - 同时把 HTML 响应交给 webIndex，提供 <title> → 任务名的回填能力
+//
+// Stop 在 Close 时被 close()，doTask 协程据此退出循环。
 type Server struct {
 	proxy     *martian.Proxy
 	collector *Collector
 	listener  net.Listener
 
-	Stop chan bool
+	Stop     chan struct{}
+	stopOnce sync.Once
 }
 
 func NewServer(vpnAddress string) (*Server, error) {
@@ -55,17 +63,24 @@ func NewServer(vpnAddress string) (*Server, error) {
 	s := &Server{
 		proxy:     agent,
 		collector: NewCollector(),
+		Stop:      make(chan struct{}),
 	}
-	s.Stop = make(chan bool)
 	agent.SetRequestModifier(s)
 	agent.SetResponseModifier(s)
 	return s, nil
 }
 
+// ModifyRequest 仅为满足 martian RequestModifier 接口；本项目所有嗅探逻辑都在响应阶段。
 func (s *Server) ModifyRequest(req *http.Request) error {
 	return nil
 }
 
+// ModifyResponse 是嗅探入口：
+//  1. 按 Content-Type/扩展名跳过 css/js/image 等明显非视频/非页面响应
+//  2. 解压 gzip/zstd 后把 body 喂给 webIndex（仅取 <title>）
+//  3. 用 GetVideo 判定是否 .m3u8/.mp4；m3u8 还需 ParseM3u8Data 通过才算"真视频"
+//  4. 通过 HasExactlyOneHttp 过滤掉嵌套 URL 的埋点跳转
+//  5. 命中后由 collector 投递任务
 func (s *Server) ModifyResponse(res *http.Response) error {
 	ctx := martian.NewContext(res.Request)
 	actx := auth.FromContext(ctx)
@@ -96,16 +111,16 @@ func (s *Server) ModifyResponse(res *http.Response) error {
 		}
 		defer reader.Close()
 		body, _ = io.ReadAll(reader)
-		addWeb(tabId, u.String(), body, res.Request.Header)
+		addWeb(tabId, u.String(), body)
 	case strings.Contains(encoding, "zstd") && len(body) > 0:
 		reader, err := zstd.NewReader(bytes.NewReader(body))
 		if err != nil {
 			return err
 		}
 		body, _ = io.ReadAll(reader)
-		addWeb(tabId, u.String(), body, res.Request.Header)
+		addWeb(tabId, u.String(), body)
 	default:
-		addWeb(tabId, u.String(), body, res.Request.Header)
+		addWeb(tabId, u.String(), body)
 	}
 
 	var isVideo bool
@@ -154,10 +169,10 @@ func (s *Server) Listen(addr string) error {
 }
 
 func (s *Server) Close() error {
+	s.stopOnce.Do(func() { close(s.Stop) })
 	if s.listener != nil {
 		return s.listener.Close()
 	}
-	s.Stop <- true
 	return nil
 }
 

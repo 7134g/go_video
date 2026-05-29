@@ -4,8 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -167,71 +165,4 @@ func ParseM3u8Data(reader io.Reader) (*M3u8, error) {
 	}
 
 	return m3u8, nil
-}
-
-const (
-	hour   = 3600
-	minute = 60
-)
-
-// CalculationTime 计算播放总时长
-func CalculationTime(d float32) string {
-	t := int(d)
-
-	h := t / hour              // 计算小时数
-	m := (t - h*hour) / minute // 计算分钟数
-	s := t - h*hour - m*minute // 计算剩余的秒数
-
-	return fmt.Sprintf("%d h %d m %d s", h, m, s)
-}
-
-func MergeFiles(saveDir string) error {
-	path, dirName := filepath.Split(saveDir)
-	outputFilepath := filepath.Join(path, dirName+".mp4")
-	outputFile, err := os.Create(outputFilepath)
-	if err != nil {
-		return err
-	}
-	defer outputFile.Close()
-
-	var size int64 = 0
-	err = filepath.Walk(saveDir, func(path string, info os.FileInfo, err error) error {
-		if info.IsDir() {
-			return nil
-		}
-
-		size += info.Size()
-
-		inputFile, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		defer inputFile.Close()
-
-		if _, err := io.Copy(outputFile, inputFile); err != nil {
-			return err
-		}
-		return nil
-	})
-
-	//fileSize, _ := table.M3u8DownloadDataLen.Get(dirName)
-	//fmt.Println(size, fileSize)
-
-	return err
-}
-
-func SaveM3u8File(sourceDir, name string, data []byte) error {
-	fp := filepath.Join(sourceDir, "m3u8", name)
-	f, err := os.Create(fp)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	_, err = f.Write(data)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

@@ -52,7 +52,6 @@ func (s *TaskService) StartTasks() (int, error) {
 		return 0, err
 	}
 
-	// Merge default headers from config into task headers
 	cfg := GetConfigService().GetConfig()
 
 	for _, t := range tasks {
@@ -65,22 +64,7 @@ func (s *TaskService) StartTasks() (int, error) {
 		}
 	}
 
-	s.ctrl.StartAll(func(id uint, err error) error {
-		defer func(ctrl *controller.DownloadController, id uint) {
-			_ = ctrl.RemoveTask(id)
-		}(s.ctrl, id)
-
-		if err != nil {
-			if errors.Is(err, context.Canceled) {
-				return s.repo.UpdateStatus(id, model.TaskStatusPaused)
-			} else {
-				return s.repo.UpdateStatus(id, model.TaskStatusFailed)
-			}
-		} else {
-			return s.repo.UpdateStatus(id, model.TaskStatusCompleted)
-		}
-	})
-
+	s.ctrl.StartAll(s.finishCallback)
 	return len(tasks), nil
 }
 
@@ -115,19 +99,7 @@ func (s *TaskService) StartTask(id uint) error {
 		return err
 	}
 
-	return s.ctrl.StartTask(id, func(id uint, err error) error {
-		defer func(ctrl *controller.DownloadController, id uint) {
-			_ = ctrl.RemoveTask(id)
-		}(s.ctrl, id)
-
-		if err != nil {
-			if errors.Is(err, context.Canceled) {
-				return s.repo.UpdateStatus(id, model.TaskStatusPaused)
-			}
-			return s.repo.UpdateStatus(id, model.TaskStatusFailed)
-		}
-		return s.repo.UpdateStatus(id, model.TaskStatusCompleted)
-	})
+	return s.ctrl.StartTask(id, s.finishCallback)
 }
 
 func (s *TaskService) AddAndStart(task *model.Task) error {
@@ -142,19 +114,7 @@ func (s *TaskService) AddAndStart(task *model.Task) error {
 		return err
 	}
 
-	return s.ctrl.AddAndStart(task.ID, task.Name, task.URL, headerJSON, task.Type, func(id uint, err error) error {
-		defer func(ctrl *controller.DownloadController, id uint) {
-			_ = ctrl.RemoveTask(id)
-		}(s.ctrl, id)
-
-		if err != nil {
-			if errors.Is(err, context.Canceled) {
-				return s.repo.UpdateStatus(id, model.TaskStatusPaused)
-			}
-			return s.repo.UpdateStatus(id, model.TaskStatusFailed)
-		}
-		return s.repo.UpdateStatus(id, model.TaskStatusCompleted)
-	})
+	return s.ctrl.AddAndStart(task.ID, task.Name, task.URL, headerJSON, task.Type, s.finishCallback)
 }
 
 func (s *TaskService) RetryTask(id uint) error {
@@ -176,23 +136,19 @@ func (s *TaskService) RetryTask(id uint) error {
 		return err
 	}
 
-	s.ctrl.StartAll(func(id uint, err error) error {
-		defer func(ctrl *controller.DownloadController, id uint) {
-			_ = ctrl.RemoveTask(id)
-		}(s.ctrl, id)
+	return s.ctrl.StartTask(id, s.finishCallback)
+}
 
-		if err != nil {
-			if errors.Is(err, context.Canceled) {
-				return s.repo.UpdateStatus(id, model.TaskStatusPaused)
-			} else {
-				return s.repo.UpdateStatus(id, model.TaskStatusFailed)
-			}
-		} else {
-			return s.repo.UpdateStatus(id, model.TaskStatusCompleted)
+// finishCallback 把任务终态写回数据库并从 controller 内存表移除。
+func (s *TaskService) finishCallback(id uint, err error) error {
+	defer func() { _ = s.ctrl.RemoveTask(id) }()
+	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return s.repo.UpdateStatus(id, model.TaskStatusPaused)
 		}
-	})
-
-	return nil
+		return s.repo.UpdateStatus(id, model.TaskStatusFailed)
+	}
+	return s.repo.UpdateStatus(id, model.TaskStatusCompleted)
 }
 
 // mergeHeaders merges default headers into task-specific headers.

@@ -3,6 +3,7 @@ package proxy
 import (
 	"bytes"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
 	"os"
@@ -66,6 +67,8 @@ func newCert(domain, org string, validDuration time.Duration) ([]byte, []byte, e
 	return certData.Bytes(), prvData.Bytes(), nil
 }
 
+// CheckCertInstalled 探测当前 CA 是否已加入系统信任存储。
+// Windows: certutil；macOS: security；Linux: 扫描常见 ca-bundle 比对 DER 指纹。
 func CheckCertInstalled() (bool, error) {
 	ca, err := LoadCA()
 	if err != nil {
@@ -79,7 +82,40 @@ func CheckCertInstalled() (bool, error) {
 	case "darwin":
 		cmd := exec.Command("security", "find-certificate", "-c", ca.Subject.CommonName, "-p", "/Library/Keychains/System.keychain")
 		return cmd.Run() == nil, nil
+	case "linux":
+		return checkLinuxBundle(ca), nil
 	default:
 		return false, nil
 	}
+}
+
+// checkLinuxBundle 在常见发行版的 CA bundle 里按 SHA-256 指纹查找当前 CA。
+// 系统层信任就足以判定 installer 跑过——NSS 是浏览器层增强,失败仍能从这里看到日志。
+func checkLinuxBundle(ca *x509.Certificate) bool {
+	target := sha256.Sum256(ca.Raw)
+	for _, path := range []string{
+		"/etc/ssl/certs/ca-certificates.crt", // Debian/Ubuntu/Alpine
+		"/etc/pki/tls/certs/ca-bundle.crt",   // RHEL/Fedora/CentOS
+		"/etc/ssl/cert.pem",                  // Arch
+	} {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			continue
+		}
+		rest := data
+		for {
+			var block *pem.Block
+			block, rest = pem.Decode(rest)
+			if block == nil {
+				break
+			}
+			if block.Type != "CERTIFICATE" {
+				continue
+			}
+			if sha256.Sum256(block.Bytes) == target {
+				return true
+			}
+		}
+	}
+	return false
 }

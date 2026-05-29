@@ -1,7 +1,11 @@
 package repository
 
 import (
+	"errors"
+
 	"go_video/internal/model"
+
+	"gorm.io/gorm"
 )
 
 type TaskRepository struct{}
@@ -11,13 +15,15 @@ func NewTaskRepository() *TaskRepository {
 }
 
 func (r *TaskRepository) Create(task *model.Task) error {
-	return DB.Debug().Create(task).Error
+	return DB.Create(task).Error
 }
 
 func (r *TaskRepository) GetByID(id uint) (*model.Task, error) {
 	var task model.Task
-	err := DB.First(&task, id).Error
-	return &task, err
+	if err := DB.First(&task, id).Error; err != nil {
+		return nil, err
+	}
+	return &task, nil
 }
 
 func (r *TaskRepository) Update(task *model.Task) error {
@@ -34,9 +40,12 @@ func (r *TaskRepository) GetPending() ([]model.Task, error) {
 	return tasks, err
 }
 
+// ResetStatus 用于进程启动时的崩溃恢复：上次进程被强杀时残留的 Running
+// 实际上不再在跑，统一置回 Pending 等待用户重新触发。
 func (r *TaskRepository) ResetStatus() error {
-	_db := DB.Model(&model.Task{})
-	return _db.Exec("UPDATE tasks SET status = 0 WHERE status = 1").Error
+	return DB.Model(&model.Task{}).
+		Where("status = ?", model.TaskStatusRunning).
+		Update("status", model.TaskStatusPending).Error
 }
 
 func (r *TaskRepository) UpdateStatus(id uint, status model.TaskStatus) error {
@@ -59,12 +68,22 @@ func (r *TaskRepository) GetByStatus(status model.TaskStatus) ([]model.Task, err
 	return tasks, err
 }
 
+// GetByURL 未找到时返回 (nil, gorm.ErrRecordNotFound)，调用方用 errors.Is 区分。
 func (r *TaskRepository) GetByURL(url string) (*model.Task, error) {
 	var task model.Task
-	err := DB.Where("url = ?", url).First(&task).Error
-	return &task, err
+	if err := DB.Where("url = ?", url).First(&task).Error; err != nil {
+		return nil, err
+	}
+	return &task, nil
+}
+
+// IsNotFound 用于调用方判断 GetByURL/GetByID 是否为"未找到"。
+func IsNotFound(err error) bool {
+	return errors.Is(err, gorm.ErrRecordNotFound)
 }
 
 func (r *TaskRepository) UpdateNameAndHeader(id uint, name, header string) error {
-	return DB.Exec("UPDATE tasks SET name = ?, header = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", name, header, id).Error
+	return DB.Model(&model.Task{}).
+		Where("id = ?", id).
+		Updates(map[string]any{"name": name, "header": header}).Error
 }

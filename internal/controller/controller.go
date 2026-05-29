@@ -19,6 +19,14 @@ var (
 	once               sync.Once
 )
 
+// DownloadController 是进程内单例的下载调度核心。
+//
+// 调度模型：
+//   - 任务先进 taskQueue（缓冲 100），dispatch goroutine 顺序读取
+//   - 每个任务通过 taskSem 信号量获取并发槽（容量 = MaxConcurrentTasks），再起独立 goroutine 跑
+//   - 任务级取消通过 DTask.ctx；分段级并发由 downloadPool 按域名再次限流
+//
+// 注意：tasks map 只存"运行中/排队中"的任务；调用方完成后必须显式 RemoveTask。
 type DownloadController struct {
 	mu           sync.RWMutex
 	tasks        map[uint]*DTask
@@ -27,6 +35,7 @@ type DownloadController struct {
 	taskQueue    chan *DTask
 	downloadPool *downloader.Pool
 	taskSem      chan struct{}
+	httpClient   *httpClientHolder
 
 	repo *repository.TaskRepository
 }
@@ -38,6 +47,8 @@ func GetController() *DownloadController {
 			panic(err)
 		}
 		cfg := model.DefaultConfig()
+		holder := &httpClientHolder{}
+		holder.SetProxy(cfg.VpnAddress)
 		downloadController = &DownloadController{
 			tasks:        make(map[uint]*DTask),
 			pwd:          dirPwd,
@@ -45,6 +56,7 @@ func GetController() *DownloadController {
 			taskQueue:    make(chan *DTask, 100),
 			downloadPool: downloader.NewPool(cfg.MaxSegmentWorkers),
 			taskSem:      make(chan struct{}, cfg.MaxConcurrentTasks),
+			httpClient:   holder,
 			repo:         repository.NewTaskRepository(),
 		}
 		if err := downloadController.repo.ResetStatus(); err != nil {
@@ -55,10 +67,6 @@ func GetController() *DownloadController {
 	return downloadController
 }
 
-func (c *DownloadController) ReloadConfig() {
-	// Called by service layer after config update
-}
-
 func (c *DownloadController) ApplyConfig(downloadDir string, maxConcurrent, maxSegment, maxErrors int, defaultHeaders map[string]string) {
 	c.mu.Lock()
 	c.config.DownloadDir = downloadDir
@@ -66,9 +74,12 @@ func (c *DownloadController) ApplyConfig(downloadDir string, maxConcurrent, maxS
 	c.config.MaxSegmentWorkers = maxSegment
 	c.config.MaxConsecutiveErrors = maxErrors
 	c.config.DefaultHeaders = defaultHeaders
+	// NOTE: 替换 pool/taskSem 不影响已 in-flight 的任务（它们持有旧引用），
+	// 新任务用新容量。完全一致需要更复杂的可调容量实现，目前权衡为简单。
 	c.downloadPool = downloader.NewPool(maxSegment)
 	c.taskSem = make(chan struct{}, maxConcurrent)
 	c.mu.Unlock()
+	c.httpClient.SetProxy(c.config.VpnAddress)
 }
 
 func (c *DownloadController) SetDownloadDir(dir string) {
@@ -184,9 +195,13 @@ func (c *DownloadController) StopAll() {
 
 func (c *DownloadController) dispatch() {
 	for task := range c.taskQueue {
-		c.taskSem <- struct{}{}
-		go func(t *DTask) {
-			defer func() { <-c.taskSem }()
+		// 快照 taskSem，避免 ApplyConfig 替换后 release 到错误的 channel。
+		c.mu.RLock()
+		sem := c.taskSem
+		c.mu.RUnlock()
+		sem <- struct{}{}
+		go func(t *DTask, sem chan struct{}) {
+			defer func() { <-sem }()
 			select {
 			case <-t.ctx.Done():
 				if t.callback != nil {
@@ -195,10 +210,12 @@ func (c *DownloadController) dispatch() {
 			default:
 				c.runTask(t, t.callback)
 			}
-		}(task)
+		}(task, sem)
 	}
 }
 
+// TaskCallback 在任务终态触达时被回调；返回 error 用于回写数据库状态时透传。
+// 入参 err 可能是 context.Canceled（用户暂停）、io/网络错误（失败）或 nil（成功）。
 type TaskCallback func(id uint, err error) error
 
 func (c *DownloadController) StartAll(callback TaskCallback) {
