@@ -54,6 +54,13 @@ func (s *ConfigService) GetConfig() *model.Config {
 	return s.repo.Get()
 }
 
+// SetFfmpegPromptDeclined 持久化“用户拒绝下载 ffmpeg”的选择，启动时据此跳过追问。
+func (s *ConfigService) SetFfmpegPromptDeclined(v bool) error {
+	cfg := s.repo.Get()
+	cfg.FfmpegPromptDeclined = v
+	return s.repo.Save(cfg)
+}
+
 func (s *ConfigService) UpdateConfig(updates map[string]interface{}) (*model.Config, error) {
 	cfg := s.repo.Get()
 

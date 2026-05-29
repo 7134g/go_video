@@ -56,7 +56,7 @@ HTTP API (internal/api) → Service (internal/service) → Controller (internal/
 - **`HasExactlyOneHttp` 过滤**：MITM 仅捕获字符串中恰好包含一个 `http(s)://` 的 URL — 用于排除埋点像素 / 跳转链接里嵌套的次级 URL。
 - **WebTree / `X-Tab-Id`**：MITM 按 `X-Tab-Id` 请求头分桶记录每个 Tab 出现过的 URL，并从 HTML 响应中即时提取 `<title>` 后只保留标题字符串（不缓存 body），整体由 `sync.Mutex` 串行化、按 LRU 限容（默认 64 个 Tab）。`POST /api/tasks/update-title` 复用此缓存重新刷新已有任务的名称。
 - **任务状态枚举** (`model.TaskStatus`)：Pending=0, Running=1, Completed=2, Failed=3, Paused=4。启动时 `repo.ResetStatus()` 会把残留的 Running 置回 Pending。
-- **ffmpeg**：项目根目录下的 `ffmpeg.exe` 用于合并 M3U8 分段文件，下载完成后自动调用。
+- **ffmpeg**：合并 M3U8 分段优先使用**纯 Go** remux（`pkg/m3u8/remux.go` 的 `MergeFilesNative`，基于 `github.com/yapingcat/gomedia` 做 TS→MP4 容器转换，不依赖外部二进制）；失败时自动回退到项目根目录下的 `ffmpeg` 二进制（`MergeFilesFfmpeg`）。若 ffmpeg 也不存在则提示用户下载到当前目录。
 
 ### 配置项（config.json）
 
@@ -71,6 +71,7 @@ HTTP API (internal/api) → Service (internal/service) → Controller (internal/
 | `agent_address` | 代理监听地址 | `127.0.0.1:9999` |
 | `vpn_address` | 上游 HTTP 代理地址 | `127.0.0.1:7890` |
 | `gin_mode` | Gin 框架模式（main.go: 空字符串走 release，非空走 debug） | `release` |
+| `ffmpeg_prompt_declined` | 用户已拒绝启动时下载 ffmpeg，置 true 后不再追问 | false |
 
 
 # karpathy

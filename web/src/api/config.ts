@@ -15,3 +15,14 @@ export const configApi = {
   get: () => request.get<Config>('/config'),
   update: (data: Partial<Config>) => request.put<Config>('/config', data),
 }
+
+export interface FfmpegStatus {
+  exists: boolean
+  supported: boolean
+}
+
+export const ffmpegApi = {
+  status: () => request.get<FfmpegStatus>('/ffmpeg/status'),
+  // 下载耗时较长（数十 MB），放宽超时到 5 分钟。
+  download: () => request.post<{ exists: boolean }>('/ffmpeg/download', null, { timeout: 300000 }),
+}

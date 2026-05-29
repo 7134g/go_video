@@ -33,6 +33,7 @@ func main() {
 
 	svr := service.GetConfigService()
 	cfg := svr.GetConfig()
+	ensureFfmpeg(svr)
 	controller.GetController().ApplyConfig(
 		cfg.DownloadDir,
 		cfg.MaxConcurrentTasks,
@@ -70,6 +71,10 @@ func main() {
 	r.GET("/api/config", configHandler.Get)
 	r.PUT("/api/config", configHandler.Update)
 
+	ffmpegHandler := api.NewFfmpegHandler()
+	r.GET("/api/ffmpeg/status", ffmpegHandler.Status)
+	r.POST("/api/ffmpeg/download", ffmpegHandler.Download)
+
 	distFS, err := fs.Sub(webFS, "web/dist")
 	if err != nil {
 		log.Fatal("Failed to load web files:", err)
@@ -85,7 +90,7 @@ func main() {
 		c.FileFromFS(c.Request.URL.Path, http.FS(distFS))
 	})
 
-	httpSrv := &http.Server{Addr: ":8080", Handler: r}
+	httpSrv := &http.Server{Addr: "127.0.0.1:8080", Handler: r}
 
 	go func() {
 		fmt.Println("web地址 http://localhost:8080")
