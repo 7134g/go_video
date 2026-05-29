@@ -16,7 +16,7 @@ func (c *DownloadController) mergeM3u8(task *DTask) error {
 		ffmpegName = "ffmpeg"
 	}
 	ffmpegPath := filepath.Join(c.pwd, ffmpegName)
-	videoDir := filepath.Join(c.config.DownloadDir, task.Name)
+	videoDir := safeJoin(c.config.DownloadDir, task.Name)
 	err := m3u8.MergeFilesFfmpeg(videoDir, ffmpegPath)
 	if err != nil {
 		return err

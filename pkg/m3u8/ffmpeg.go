@@ -9,6 +9,10 @@ import (
 	"path/filepath"
 )
 
+// MergeFilesFfmpeg 使用 ffmpeg concat demuxer 把 savePath 下所有分段合并为 <dirName>.mp4。
+//
+// 隐式假设：分段文件名按字典序即为播放顺序。controller 写入时用 "%06d.ts" 命名，
+// 与 filepath.Walk 的字典序遍历刚好一致；若调用方改了命名规则需重新审视。
 func MergeFilesFfmpeg(savePath, ffmpeg string) error {
 	info, err := os.Stat(ffmpeg)
 	if err != nil || info == nil {

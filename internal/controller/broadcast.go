@@ -14,11 +14,11 @@ var (
 	msgMu        sync.RWMutex
 )
 
+// BroadcastMessage 向所有 WebSocket 监听者非阻塞广播一条消息。
+// 监听者 channel 已满时会丢弃该消息——优先保护 controller 不被慢消费者拖死。
 func BroadcastMessage(taskID uint, msg string) {
 	msgMu.RLock()
 	defer msgMu.RUnlock()
-
-	//fmt.Println("====================>", msg)
 
 	m := Message{TaskID: taskID, Message: msg}
 	for _, ch := range msgListeners {

@@ -3,7 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
-	m3u9 "go_video/pkg/m3u8"
+	"go_video/pkg/m3u8"
 	"io"
 	"net/http"
 	"net/url"
@@ -22,7 +22,7 @@ func convertHeaders(m map[string]string) http.Header {
 
 func (c *DownloadController) downloadM3u8(task *DTask) error {
 	BroadcastMessage(task.ID, "开始下载..."+task.Name)
-	dir := filepath.Join(c.config.DownloadDir, task.Name)
+	dir := safeJoin(c.config.DownloadDir, task.Name)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
@@ -38,23 +38,22 @@ func (c *DownloadController) downloadM3u8(task *DTask) error {
 		if idx < 0 {
 			return fmt.Errorf("no valid stream found")
 		}
-		streamURL := m3u9.ResolveURL(parsed.MasterPlaylist[idx].URI, baseURL)
+		streamURL := m3u8.ResolveURL(parsed.MasterPlaylist[idx].URI, baseURL)
 		parsed, baseURL, err = c.parseM3u8(task.ctx, streamURL, task.Header)
 		if err != nil {
 			return err
 		}
 	}
 
-	// 预下载加密密钥
 	header := task.Header
 	if len(header) == 0 {
 		header = convertHeaders(c.config.DefaultHeaders)
 	}
-	keyCache := m3u9.NewKeyCache()
+	keyCache := m3u8.NewKeyCache()
 	if parsed.HasEncryption() {
 		for _, key := range parsed.Keys {
-			if key.Method == m3u9.CryptMethodAES && key.URI != "" {
-				keyData, err := m3u9.DownloadKey(key.URI, baseURL, header)
+			if key.Method == m3u8.CryptMethodAES && key.URI != "" {
+				keyData, err := m3u8.DownloadKey(key.URI, baseURL, header)
 				if err != nil {
 					return fmt.Errorf("download key failed: %w", err)
 				}
@@ -67,9 +66,14 @@ func (c *DownloadController) downloadM3u8(task *DTask) error {
 	segments := parsed.Segments
 	task.Progress.SetSegment(0, len(segments))
 
+	// 快照 pool，避免 ApplyConfig 中途替换。
+	c.mu.RLock()
+	pool := c.downloadPool
+	c.mu.RUnlock()
+
 	var consecutiveErrors int32
 	errChan := make(chan error, 1)
-	group := c.downloadPool.NewGroup()
+	group := pool.NewGroup()
 
 	for i, seg := range segments {
 		if task.ctx.Err() != nil {
@@ -82,11 +86,10 @@ func (c *DownloadController) downloadM3u8(task *DTask) error {
 		segFile := filepath.Join(dir, fmt.Sprintf("%06d.ts", i))
 		if _, err := os.Stat(segFile); err == nil {
 			task.Progress.SetSegment(i+1, len(segments))
-			//fmt.Printf("已存在 ---> %s\n", segFile)
 			continue
 		}
 
-		segURL := m3u9.ResolveURL(seg.URI, baseURL)
+		segURL := m3u8.ResolveURL(seg.URI, baseURL)
 		key := parsed.GetSegmentKey(seg)
 
 		idx := i
@@ -129,7 +132,7 @@ func (c *DownloadController) downloadM3u8(task *DTask) error {
 	return nil
 }
 
-func (c *DownloadController) parseM3u8(ctx context.Context, m3u8URL string, header http.Header) (*m3u9.M3u8, *url.URL, error) {
+func (c *DownloadController) parseM3u8(ctx context.Context, m3u8URL string, header http.Header) (*m3u8.M3u8, *url.URL, error) {
 	baseURL, _ := url.Parse(m3u8URL)
 
 	req, err := http.NewRequestWithContext(ctx, "GET", m3u8URL, nil)
@@ -143,22 +146,13 @@ func (c *DownloadController) parseM3u8(ctx context.Context, m3u8URL string, head
 		req.Header[k] = v
 	}
 
-	client := &http.Client{
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return nil
-		},
-	}
-	if c.config.VpnAddress != "" {
-		proxyURL, _ := url.Parse("http://" + c.config.VpnAddress)
-		client.Transport = &http.Transport{Proxy: http.ProxyURL(proxyURL)}
-	}
-	resp, err := client.Do(req)
+	resp, err := c.httpClient.Get().Do(req)
 	if err != nil {
 		return nil, nil, err
 	}
 	defer resp.Body.Close()
 
-	parsed, err := m3u9.ParseM3u8Data(resp.Body)
+	parsed, err := m3u8.ParseM3u8Data(resp.Body)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -166,7 +160,7 @@ func (c *DownloadController) parseM3u8(ctx context.Context, m3u8URL string, head
 	return parsed, baseURL, nil
 }
 
-func (c *DownloadController) downloadSegment(ctx context.Context, segURL, filename string, header http.Header, seg *m3u9.Segment, key *m3u9.Key, mediaSeq uint64) error {
+func (c *DownloadController) downloadSegment(ctx context.Context, segURL, filename string, header http.Header, seg *m3u8.Segment, key *m3u8.Key, mediaSeq uint64) error {
 	req, err := http.NewRequestWithContext(ctx, "GET", segURL, nil)
 	if err != nil {
 		return err
@@ -178,16 +172,7 @@ func (c *DownloadController) downloadSegment(ctx context.Context, segURL, filena
 		req.Header[k] = v
 	}
 
-	client := &http.Client{
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return nil
-		},
-	}
-	if c.config.VpnAddress != "" {
-		proxyURL, _ := url.Parse("http://" + c.config.VpnAddress)
-		client.Transport = &http.Transport{Proxy: http.ProxyURL(proxyURL)}
-	}
-	resp, err := client.Do(req)
+	resp, err := c.httpClient.Get().Do(req)
 	if err != nil {
 		return err
 	}
@@ -198,13 +183,12 @@ func (c *DownloadController) downloadSegment(ctx context.Context, segURL, filena
 		return err
 	}
 
-	// 解密
-	if key != nil && key.Method == m3u9.CryptMethodAES && len(key.KeyData) > 0 {
-		iv, err := m3u9.ParseIV(key.IV, mediaSeq+uint64(seg.KeyIndex))
+	if key != nil && key.Method == m3u8.CryptMethodAES && len(key.KeyData) > 0 {
+		iv, err := m3u8.ParseIV(key.IV, mediaSeq+uint64(seg.KeyIndex))
 		if err != nil {
 			return fmt.Errorf("parse IV failed: %w", err)
 		}
-		data, err = m3u9.Decrypt(data, key.KeyData, iv)
+		data, err = m3u8.Decrypt(data, key.KeyData, iv)
 		if err != nil {
 			return fmt.Errorf("decrypt failed: %w", err)
 		}

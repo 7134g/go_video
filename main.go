@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"embed"
+	"errors"
 	"fmt"
 	"go_video/internal/api"
 	"go_video/internal/controller"
@@ -13,7 +15,9 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -27,7 +31,6 @@ func main() {
 	}
 	InitCa()
 
-	// 加载配置并应用到 controller
 	svr := service.GetConfigService()
 	cfg := svr.GetConfig()
 	controller.GetController().ApplyConfig(
@@ -39,13 +42,13 @@ func main() {
 	)
 	svr.Init()
 
-	fmt.Println("web地址 http://localhost:8080")
-	r := gin.Default()
-	if cfg.GinMode == "" {
-		gin.SetMode(gin.ReleaseMode)
-	} else {
-		gin.SetMode(gin.DebugMode)
+	mode := cfg.GinMode
+	if mode == "" {
+		mode = gin.ReleaseMode
 	}
+	gin.SetMode(mode)
+
+	r := gin.Default()
 	h := api.NewTaskHandler()
 
 	tasks := r.Group("/api/tasks")
@@ -82,22 +85,46 @@ func main() {
 		c.FileFromFS(c.Request.URL.Path, http.FS(distFS))
 	})
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	httpSrv := &http.Server{Addr: ":8080", Handler: r}
+
 	go func() {
-		<-quit
-		os.Exit(0)
+		fmt.Println("web地址 http://localhost:8080")
+		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatal("http server:", err)
+		}
 	}()
 
-	_ = r.Run(":8080")
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Println("shutting down...")
+	controller.GetController().StopAll()
+	svr.Shutdown()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := httpSrv.Shutdown(ctx); err != nil {
+		log.Println("http shutdown:", err)
+	}
 }
 
 func InitCa() {
 	installed, err := proxy.CheckCertInstalled()
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
-	if !installed {
-		panic("需要先安装证书")
+	if installed {
+		return
+	}
+	switch runtime.GOOS {
+	case "windows":
+		log.Fatal("CA 未安装,请运行 install_cert.exe")
+	case "darwin":
+		log.Fatal("CA 未安装,请运行 ./install_cert(将提示 sudo 密码)")
+	case "linux":
+		log.Fatal("CA 未安装,请运行 ./install_cert(会提示 sudo,并安装到系统及 NSS 库)")
+	default:
+		log.Fatal("CA 未安装,且当前平台不支持自动安装")
 	}
 }

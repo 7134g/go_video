@@ -13,6 +13,8 @@ const (
 	TaskTypeM3u8 TaskType = "m3u8"
 )
 
+// DTask 是 controller 持有的运行时任务表示，区别于持久化的 model.Task。
+// ctx/cancel 用于响应 StopTask / StopAll；callback 在终态时由 dispatch 调用。
 type DTask struct {
 	ID       uint
 	Name     string
@@ -25,6 +27,7 @@ type DTask struct {
 	cancel   context.CancelFunc
 }
 
+// Progress 在多 segment goroutine 并发更新下保证安全；所有读写均通过其方法走 mu。
 type Progress struct {
 	mu          sync.RWMutex
 	Downloaded  int64
