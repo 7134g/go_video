@@ -48,7 +48,9 @@ func GetController() *DownloadController {
 		}
 		cfg := model.DefaultConfig()
 		holder := &httpClientHolder{}
-		holder.SetProxy(cfg.VpnAddress)
+		if len(cfg.VpnAddress) > 0 && cfg.VpnStatus {
+			holder.SetProxy(cfg.VpnAddress)
+		}
 		downloadController = &DownloadController{
 			tasks:        make(map[uint]*DTask),
 			pwd:          dirPwd,
@@ -79,7 +81,9 @@ func (c *DownloadController) ApplyConfig(downloadDir string, maxConcurrent, maxS
 	c.downloadPool = downloader.NewPool(maxSegment)
 	c.taskSem = make(chan struct{}, maxConcurrent)
 	c.mu.Unlock()
-	c.httpClient.SetProxy(c.config.VpnAddress)
+	if len(c.config.VpnAddress) > 0 && c.config.VpnStatus {
+		c.httpClient.SetProxy(c.config.VpnAddress)
+	}
 }
 
 func (c *DownloadController) SetDownloadDir(dir string) {
@@ -252,6 +256,9 @@ func (c *DownloadController) runTask(task *DTask, callback TaskCallback) {
 	switch task.Type {
 	case TaskTypeMp4:
 		err = c.downloadMp4(task)
+		if err != nil {
+			log.Println("下载失败---", err.Error())
+		}
 	case TaskTypeM3u8:
 		err = c.downloadM3u8(task)
 		if err == nil {
@@ -259,7 +266,10 @@ func (c *DownloadController) runTask(task *DTask, callback TaskCallback) {
 			if err != nil {
 				BroadcastMessage(task.ID, "合并失败..."+err.Error())
 			}
+		} else {
+			log.Println("下载失败---", err.Error())
 		}
+
 	}
 	if callback != nil {
 		_ = callback(task.ID, err)

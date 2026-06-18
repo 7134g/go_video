@@ -35,7 +35,11 @@ func GetConfigService() *ConfigService {
 func (s *ConfigService) Init() {
 	cfg := s.repo.Get()
 	if cfg.InterceptorEnabled {
-		go s.startProxyServer(cfg.AgentAddress, cfg.VpnAddress)
+		vpnAddress := cfg.VpnAddress
+		if !cfg.VpnStatus {
+			vpnAddress = ""
+		}
+		go s.startProxyServer(cfg.AgentAddress, vpnAddress)
 	}
 }
 
@@ -112,6 +116,14 @@ func (s *ConfigService) UpdateConfig(updates map[string]interface{}) (*model.Con
 			if v, ok := val.(string); ok {
 				cfg.AgentAddress = v
 			}
+		case "vpn_address":
+			if v, ok := val.(string); ok {
+				cfg.VpnAddress = v
+			}
+		case "vpn_status":
+			if v, ok := val.(bool); ok {
+				cfg.VpnStatus = v
+			}
 		}
 	}
 
@@ -141,7 +153,11 @@ func (s *ConfigService) handleInterceptor(cfg *model.Config) error {
 	defer s.mu.Unlock()
 
 	if cfg.InterceptorEnabled && !s.proxyRunning {
-		go s.startProxyServer(cfg.AgentAddress, cfg.VpnAddress)
+		vpnAddress := cfg.VpnAddress
+		if !cfg.VpnStatus {
+			vpnAddress = ""
+		}
+		go s.startProxyServer(cfg.AgentAddress, vpnAddress)
 		s.proxyRunning = true
 	} else if !cfg.InterceptorEnabled && s.proxyRunning {
 		if s.proxyServer != nil {
