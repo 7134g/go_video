@@ -58,19 +58,19 @@
     </div>
 
     <div class="right-panel">
-      <div class="progress-panel">
-        <div class="panel-header">
-          <span>任务进度</span>
-        </div>
-        <div class="progress-content">
-          <div v-for="t in taskProgressList" :key="t.id" class="progress-item">
-            <div class="progress-name">{{ t.name }}</div>
-            <el-progress :percentage="t.percent" :stroke-width="8" />
-            <div class="progress-segment">{{ t.segment_done }}/{{ t.segment_all }} 段</div>
-          </div>
-          <div v-if="!taskProgressList.length" class="ws-empty">暂无进行中的任务</div>
-        </div>
-      </div>
+<!--      <div class="progress-panel">-->
+<!--        <div class="panel-header">-->
+<!--          <span>任务进度</span>-->
+<!--        </div>-->
+<!--        <div class="progress-content">-->
+<!--          <div v-for="t in taskProgressList" :key="t.id" class="progress-item">-->
+<!--            <div class="progress-name">{{ t.name }}</div>-->
+<!--            <el-progress :percentage="t.percent" :stroke-width="8" />-->
+<!--            <div class="progress-segment">{{ t.segment_done }}/{{ t.segment_all }} 段</div>-->
+<!--          </div>-->
+<!--          <div v-if="!taskProgressList.length" class="ws-empty">暂无进行中的任务</div>-->
+<!--        </div>-->
+<!--      </div>-->
 
       <div class="ws-log">
         <div class="ws-header">
@@ -87,6 +87,8 @@
         </div>
       </div>
     </div>
+
+
   </div>
 </template>
 
@@ -229,13 +231,19 @@ function connectWS() {
 
 function addLog(data: string) {
   const time = new Date().toLocaleTimeString()
+  const el = logContainer.value
+  const atBottom = el
+    ? el.scrollHeight - el.scrollTop - el.clientHeight < 50
+    : false
   wsLogs.value.push({ time, data })
   if (wsLogs.value.length > 100) wsLogs.value.shift()
-  nextTick(() => {
-    if (logContainer.value) {
-      logContainer.value.scrollTop = logContainer.value.scrollHeight
-    }
-  })
+  if (atBottom) {
+    nextTick(() => {
+      if (logContainer.value) {
+        logContainer.value.scrollTop = logContainer.value.scrollHeight
+      }
+    })
+  }
 }
 
 onMounted(() => {
