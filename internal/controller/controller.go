@@ -48,6 +48,7 @@ func GetController() *DownloadController {
 		}
 		cfg := model.DefaultConfig()
 		holder := &httpClientHolder{}
+		holder.Init()
 		if len(cfg.VpnAddress) > 0 && cfg.VpnStatus {
 			holder.SetProxy(cfg.VpnAddress)
 		}

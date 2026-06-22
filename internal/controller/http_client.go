@@ -14,6 +14,10 @@ type httpClientHolder struct {
 	cli atomic.Pointer[http.Client]
 }
 
+func (h *httpClientHolder) Init() {
+	h.cli.Store(http.DefaultClient)
+}
+
 // SetProxy 在每次 ApplyConfig 时被调用，重新装配 Transport。
 // 传空字符串则不走上游代理。
 func (h *httpClientHolder) SetProxy(vpnAddress string) {
