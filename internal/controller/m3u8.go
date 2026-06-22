@@ -85,7 +85,7 @@ func (c *DownloadController) downloadM3u8(task *DTask) error {
 
 		segFile := filepath.Join(dir, fmt.Sprintf("%06d.ts", i))
 		if _, err := os.Stat(segFile); err == nil {
-			task.Progress.SetSegment(i+1, len(segments))
+			task.Progress.IncrementSegmentDone()
 			continue
 		}
 
@@ -108,7 +108,7 @@ func (c *DownloadController) downloadM3u8(task *DTask) error {
 				return err
 			}
 			atomic.StoreInt32(&consecutiveErrors, 0)
-			task.Progress.SetSegment(idx+1, len(segments))
+			task.Progress.IncrementSegmentDone()
 			return nil
 		})
 	}

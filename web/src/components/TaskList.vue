@@ -218,7 +218,7 @@ function connectWS() {
     }
   }
 
-  ws.onclose = () => {
+ws.onclose = () => {
     wsConnected.value = false
     addLog('[连接断开，3秒后重连...]')
     setTimeout(connectWS, 3000)

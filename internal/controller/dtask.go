@@ -58,8 +58,16 @@ func (p *Progress) GetProgress() (downloaded, total int64) {
 func (p *Progress) SetSegment(done, all int) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	p.SegmentDone = done
+	if done > p.SegmentDone {
+		p.SegmentDone = done
+	}
 	p.SegmentAll = all
+}
+
+func (p *Progress) IncrementSegmentDone() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.SegmentDone++
 }
 
 func (p *Progress) GetSegment() (done, all int) {
