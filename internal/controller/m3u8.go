@@ -64,7 +64,7 @@ func (c *DownloadController) downloadM3u8(task *DTask) error {
 	}
 
 	segments := parsed.Segments
-	task.Progress.SetSegment(0, len(segments))
+	task.Progress.SetTotal(int64(len(segments)))
 
 	// 快照 pool，避免 ApplyConfig 中途替换。
 	c.mu.RLock()
@@ -85,7 +85,7 @@ func (c *DownloadController) downloadM3u8(task *DTask) error {
 
 		segFile := filepath.Join(dir, fmt.Sprintf("%06d.ts", i))
 		if _, err := os.Stat(segFile); err == nil {
-			task.Progress.IncrementSegmentDone()
+			task.Progress.IncrementDone()
 			continue
 		}
 
@@ -108,7 +108,7 @@ func (c *DownloadController) downloadM3u8(task *DTask) error {
 				return err
 			}
 			atomic.StoreInt32(&consecutiveErrors, 0)
-			task.Progress.IncrementSegmentDone()
+			task.Progress.IncrementDone()
 			return nil
 		})
 	}

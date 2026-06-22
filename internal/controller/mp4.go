@@ -16,7 +16,7 @@ type progressReader struct {
 func (pr *progressReader) Read(buf []byte) (int, error) {
 	n, err := pr.r.Read(buf)
 	if n > 0 {
-		pr.p.AddDownloaded(int64(n))
+		pr.p.AddDone(int64(n))
 	}
 	return n, err
 }
@@ -63,7 +63,7 @@ func (c *DownloadController) downloadMp4(task *DTask) error {
 		localSize = 0
 	}
 	task.Progress.SetTotal(totalSize)
-	task.Progress.AddDownloaded(localSize)
+	task.Progress.AddDone(localSize)
 
 	var file *os.File
 	if localSize > 0 {

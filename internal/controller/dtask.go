@@ -29,12 +29,11 @@ type DTask struct {
 
 // Progress 在多 segment goroutine 并发更新下保证安全；所有读写均通过其方法走 mu。
 type Progress struct {
-	mu          sync.RWMutex
-	Downloaded  int64
-	Total       int64
-	SegmentDone int
-	SegmentAll  int
-	Status      string
+	mu     sync.RWMutex
+	Done   int64
+	Total  int64
+	Type   TaskType
+	Status string
 }
 
 func (p *Progress) SetTotal(total int64) {
@@ -43,35 +42,20 @@ func (p *Progress) SetTotal(total int64) {
 	p.Total = total
 }
 
-func (p *Progress) AddDownloaded(n int64) {
+func (p *Progress) AddDone(n int64) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	p.Downloaded += n
+	p.Done += n
 }
 
-func (p *Progress) GetProgress() (downloaded, total int64) {
+func (p *Progress) IncrementDone() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.Done++
+}
+
+func (p *Progress) GetProgress() (done, total int64) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	return p.Downloaded, p.Total
-}
-
-func (p *Progress) SetSegment(done, all int) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	if done > p.SegmentDone {
-		p.SegmentDone = done
-	}
-	p.SegmentAll = all
-}
-
-func (p *Progress) IncrementSegmentDone() {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.SegmentDone++
-}
-
-func (p *Progress) GetSegment() (done, all int) {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
-	return p.SegmentDone, p.SegmentAll
+	return p.Done, p.Total
 }

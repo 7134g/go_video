@@ -120,7 +120,7 @@ func (c *DownloadController) AddTask(id uint, name, url, headerJSON, taskType st
 		URL:      url,
 		Header:   header,
 		Type:     TaskType(taskType),
-		Progress: &Progress{},
+		Progress: &Progress{Type: TaskType(taskType)},
 		ctx:      ctx,
 		cancel:   cancel,
 	}
@@ -148,7 +148,7 @@ func (c *DownloadController) AddAndStart(id uint, name, url, headerJSON, taskTyp
 		URL:      url,
 		Header:   header,
 		Type:     TaskType(taskType),
-		Progress: &Progress{},
+		Progress: &Progress{Type: TaskType(taskType)},
 		ctx:      ctx,
 		cancel:   cancel,
 	}
@@ -292,14 +292,12 @@ func (c *DownloadController) runTask(task *DTask, callback TaskCallback) {
 }
 
 type ProgressInfo struct {
-	ID          uint   `json:"id"`
-	Name        string `json:"name"`
-	Type        string `json:"type"`
-	Downloaded  int64  `json:"downloaded"`
-	Total       int64  `json:"total"`
-	SegmentDone int    `json:"segment_done"`
-	SegmentAll  int    `json:"segment_all"`
-	Percent     int    `json:"percent"`
+	ID      uint   `json:"id"`
+	Name    string `json:"name"`
+	Type    string `json:"type"`
+	Done    int64  `json:"done"`
+	Total   int64  `json:"total"`
+	Percent int    `json:"percent"`
 }
 
 func (c *DownloadController) GetAllProgress() []ProgressInfo {
@@ -308,23 +306,18 @@ func (c *DownloadController) GetAllProgress() []ProgressInfo {
 
 	result := make([]ProgressInfo, 0, len(c.tasks))
 	for _, t := range c.tasks {
-		downloaded, total := t.Progress.GetProgress()
-		segDone, segAll := t.Progress.GetSegment()
+		done, total := t.Progress.GetProgress()
 		percent := 0
 		if total > 0 {
-			percent = int(downloaded * 100 / total)
-		} else if segAll > 0 {
-			percent = segDone * 100 / segAll
+			percent = int(done * 100 / total)
 		}
 		result = append(result, ProgressInfo{
-			ID:          t.ID,
-			Name:        t.Name,
-			Type:        string(t.Type),
-			Downloaded:  downloaded,
-			Total:       total,
-			SegmentDone: segDone,
-			SegmentAll:  segAll,
-			Percent:     percent,
+			ID:      t.ID,
+			Name:    t.Name,
+			Type:    string(t.Type),
+			Done:    done,
+			Total:   total,
+			Percent: percent,
 		})
 	}
 	return result

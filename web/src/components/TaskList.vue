@@ -111,10 +111,8 @@ interface TaskProgress {
   id: number
   name: string
   type: string
-  downloaded: number
+  done: number
   total: number
-  segment_done: number
-  segment_all: number
   percent: number
 }
 const taskProgressList = ref<TaskProgress[]>([])
