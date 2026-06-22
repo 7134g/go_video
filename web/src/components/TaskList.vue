@@ -46,6 +46,7 @@
               <el-button size="small" type="info" @click="handleUpdateTitle(row.id)">更新标题</el-button>
             </div>
             <el-button size="small" @click="handleEdit(row)" v-if="row.status === 0 || row.status === 2 || row.status === 3 || row.status === 4">编辑</el-button>
+            <el-button size="small" type="success" @click="handleRedownload(row.id)" v-if="row.status === 2">重新下载</el-button>
             <el-button size="small" type="warning" @click="handlePause(row.id)" v-if="row.status === 1">暂停</el-button>
             <el-button size="small" type="primary" @click="handleRetry(row.id)" v-if="row.status === 3 || row.status === 4">重试</el-button>
             <el-button size="small" type="danger" @click="handleDelete(row.id)" v-if="row.status !== 1">删除</el-button>
@@ -171,6 +172,13 @@ async function handleStartOne(id: number) {
 async function handlePause(id: number) {
   await taskApi.pause(id)
   ElMessage.success('任务已暂停')
+  loadTasks()
+}
+
+async function handleRedownload(id: number) {
+  await ElMessageBox.confirm('确定重新下载？已下载的文件将被删除。', '提示')
+  await taskApi.redownload(id)
+  ElMessage.success('任务已重置，可重新开始下载')
   loadTasks()
 }
 

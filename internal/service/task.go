@@ -117,6 +117,19 @@ func (s *TaskService) AddAndStart(task *model.Task) error {
 	return s.ctrl.AddAndStart(task.ID, task.Name, task.URL, headerJSON, task.Type, s.finishCallback)
 }
 
+func (s *TaskService) RedownloadTask(id uint) error {
+	task, err := s.repo.GetByID(id)
+	if err != nil {
+		return err
+	}
+	if task.Status != model.TaskStatusCompleted {
+		return errors.New("task is not completed")
+	}
+
+	s.ctrl.DeleteTaskFiles(task.Name, controller.TaskType(task.Type))
+	return s.repo.UpdateStatus(id, model.TaskStatusPending)
+}
+
 func (s *TaskService) RetryTask(id uint) error {
 	task, err := s.repo.GetByID(id)
 	if err != nil {

@@ -33,4 +33,5 @@ export const taskApi = {
   startOne: (id: number) => request.post('/tasks/start-one', { id }),
   stopAll: () => request.post('/tasks/stop-all'),
   updateTitle: (id: number) => request.post<Task>('/tasks/update-title', { id }),
+  redownload: (id: number) => request.post('/tasks/redownload', { id }),
 }

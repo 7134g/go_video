@@ -150,6 +150,19 @@ func (h *TaskHandler) StartOne(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "started"})
 }
 
+func (h *TaskHandler) Redownload(c *gin.Context) {
+	var req IDReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.svc.RedownloadTask(req.ID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "reset for redownload"})
+}
+
 func (h *TaskHandler) UpdateTitle(c *gin.Context) {
 	var req IDReq
 	if err := c.ShouldBindJSON(&req); err != nil {

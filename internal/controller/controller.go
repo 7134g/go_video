@@ -91,6 +91,20 @@ func (c *DownloadController) SetDownloadDir(dir string) {
 	c.config.DownloadDir = dir
 }
 
+// DeleteTaskFiles removes downloaded files for a completed task.
+// For mp4: removes <name>.mp4; for m3u8: removes the whole segment directory.
+// Returns nil if files don't exist.
+func (c *DownloadController) DeleteTaskFiles(name string, taskType TaskType) error {
+	base := safeJoin(c.config.DownloadDir, name)
+	switch taskType {
+	case TaskTypeMp4:
+		_ = os.Remove(base + ".mp4")
+	case TaskTypeM3u8:
+		_ = os.RemoveAll(base)
+	}
+	return nil
+}
+
 func (c *DownloadController) AddTask(id uint, name, url, headerJSON, taskType string) error {
 	header := http.Header{}
 	if headerJSON != "" {
