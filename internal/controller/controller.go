@@ -273,16 +273,16 @@ func (c *DownloadController) runTask(task *DTask, callback TaskCallback) {
 		err = c.downloadMp4(task)
 		if err != nil {
 			log.Println("下载失败---", err.Error())
+			break
 		}
 	case TaskTypeM3u8:
 		err = c.downloadM3u8(task)
-		if err == nil {
-			err = c.mergeM3u8(task)
-			if err != nil {
-				BroadcastMessage(task.ID, "合并失败..."+err.Error())
-			}
-		} else {
-			log.Println("下载失败---", err.Error())
+		if err != nil {
+			log.Println("下载失败...", err.Error())
+			break
+		}
+		if err := c.mergeM3u8(task); err != nil {
+			BroadcastMessage(task.ID, "合并失败..."+err.Error())
 		}
 
 	}

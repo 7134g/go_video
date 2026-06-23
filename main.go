@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"go_video/internal/api"
 	"go_video/internal/controller"
+	"go_video/internal/model"
 	"go_video/internal/repository"
 	"go_video/internal/service"
 	"go_video/pkg/proxy"
@@ -16,6 +19,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -41,6 +45,7 @@ func main() {
 		cfg.MaxConsecutiveErrors,
 		cfg.DefaultHeaders,
 	)
+	importTaskFile(cfg.DefaultHeaders)
 	svr.Init()
 
 	mode := cfg.GinMode
@@ -112,6 +117,66 @@ func main() {
 	defer cancel()
 	if err := httpSrv.Shutdown(ctx); err != nil {
 		log.Println("http shutdown:", err)
+	}
+}
+
+func importTaskFile(defaultHeaders map[string]string) {
+	f, err := os.Open("task.txt")
+	if err != nil {
+		if os.IsNotExist(err) {
+			return
+		}
+		log.Println("读取 task.txt 失败:", err)
+		return
+	}
+
+	var lines []string
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line != "" {
+			lines = append(lines, line)
+		}
+	}
+	f.Close()
+
+	repo := repository.NewTaskRepository()
+
+	for i := 0; i+1 < len(lines); i += 2 {
+		name := lines[i]
+		url := lines[i+1]
+
+		if _, err := repo.GetByURL(url); err == nil {
+			log.Printf("task '%s' URL 已存在，跳过", name)
+			continue
+		}
+
+		taskType := "m3u8"
+		if strings.HasSuffix(url, ".mp4") {
+			taskType = "mp4"
+		}
+
+		h := make(http.Header)
+		for k, v := range defaultHeaders {
+			h.Set(k, v)
+		}
+		headerJSON, _ := json.Marshal(h)
+
+		task := &model.Task{
+			Name:   name,
+			URL:    url,
+			Header: string(headerJSON),
+			Type:   taskType,
+			Status: model.TaskStatusPending,
+		}
+
+		if err := repo.Create(task); err != nil {
+			log.Printf("导入任务 '%s' 失败: %v", name, err)
+		}
+	}
+
+	if err := os.Remove("task.txt"); err != nil {
+		log.Printf("删除 task.txt 失败(warning): %v", err)
 	}
 }
 
