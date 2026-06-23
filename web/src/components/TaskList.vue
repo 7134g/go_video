@@ -59,19 +59,19 @@
     </div>
 
     <div class="right-panel">
-<!--      <div class="progress-panel">-->
-<!--        <div class="panel-header">-->
-<!--          <span>任务进度</span>-->
-<!--        </div>-->
-<!--        <div class="progress-content">-->
-<!--          <div v-for="t in taskProgressList" :key="t.id" class="progress-item">-->
-<!--            <div class="progress-name">{{ t.name }}</div>-->
-<!--            <el-progress :percentage="t.percent" :stroke-width="8" />-->
-<!--            <div class="progress-segment">{{ t.segment_done }}/{{ t.segment_all }} 段</div>-->
-<!--          </div>-->
-<!--          <div v-if="!taskProgressList.length" class="ws-empty">暂无进行中的任务</div>-->
-<!--        </div>-->
-<!--      </div>-->
+      <!--      <div class="progress-panel">-->
+      <!--        <div class="panel-header">-->
+      <!--          <span>任务进度</span>-->
+      <!--        </div>-->
+      <!--        <div class="progress-content">-->
+      <!--          <div v-for="t in taskProgressList" :key="t.id" class="progress-item">-->
+      <!--            <div class="progress-name">{{ t.name }}</div>-->
+      <!--            <el-progress :percentage="t.percent" :stroke-width="8" />-->
+      <!--            <div class="progress-segment">{{ t.segment_done }}/{{ t.segment_all }} 段</div>-->
+      <!--          </div>-->
+      <!--          <div v-if="!taskProgressList.length" class="ws-empty">暂无进行中的任务</div>-->
+      <!--        </div>-->
+      <!--      </div>-->
 
       <div class="ws-log">
         <div class="ws-header">
@@ -120,6 +120,7 @@ const wsConnected = ref(false)
 const wsLogs = ref<{ time: string; data: string }[]>([])
 const logContainer = ref<HTMLElement>()
 let ws: WebSocket | null = null
+let retryCount = 0
 let refreshTimer: number | null = null
 
 const statusText = (s: number) => ['待执行', '执行中', '完成', '失败', '已暂停'][s]
@@ -209,6 +210,7 @@ function connectWS() {
 
   ws.onopen = () => {
     wsConnected.value = true
+    retryCount = 0
     addLog('[连接成功]')
   }
 
@@ -221,12 +223,25 @@ function connectWS() {
       for (const item of data) {
         progress.value[item.id] = item.percent
       }
+    } else {
+      const idx = taskProgressList.value.findIndex(t => t.id === data.id)
+      if (idx >= 0) {
+        taskProgressList.value[idx] = data as TaskProgress
+      } else {
+        taskProgressList.value.push(data as TaskProgress)
+      }
+      progress.value[data.id] = data.percent
     }
   }
 
-ws.onclose = () => {
+  ws.onclose = () => {
     wsConnected.value = false
-    addLog('[连接断开，3秒后重连...]')
+    retryCount++
+    if (retryCount >= 3) {
+      addLog('[连接断开，已达最大重试次数，停止重连]')
+      return
+    }
+    addLog(`[连接断开，3秒后重连...（${retryCount}/3）]`)
     setTimeout(connectWS, 3000)
   }
 
@@ -239,8 +254,8 @@ function addLog(data: string) {
   const time = new Date().toLocaleTimeString()
   const el = logContainer.value
   const atBottom = el
-    ? el.scrollHeight - el.scrollTop - el.clientHeight < 50
-    : false
+      ? el.scrollHeight - el.scrollTop - el.clientHeight < 50
+      : false
   wsLogs.value.push({ time, data })
   if (wsLogs.value.length > 100) wsLogs.value.shift()
   if (atBottom) {

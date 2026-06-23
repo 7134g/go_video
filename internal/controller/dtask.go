@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"sync"
+	"time"
 )
 
 type TaskType string
@@ -29,11 +30,13 @@ type DTask struct {
 
 // Progress 在多 segment goroutine 并发更新下保证安全；所有读写均通过其方法走 mu。
 type Progress struct {
-	mu     sync.RWMutex
-	Done   int64
-	Total  int64
-	Type   TaskType
-	Status string
+	mu       sync.RWMutex
+	taskID   uint
+	taskName string
+	Done     int64
+	Total    int64
+	Type     TaskType
+	Status   string
 }
 
 func (p *Progress) SetTotal(total int64) {
@@ -44,14 +47,44 @@ func (p *Progress) SetTotal(total int64) {
 
 func (p *Progress) AddDone(n int64) {
 	p.mu.Lock()
-	defer p.mu.Unlock()
 	p.Done += n
+	done, total := p.Done, p.Total
+	p.mu.Unlock()
+
+	percent := 0
+	if total > 0 {
+		percent = int(done * 100 / total)
+	}
+	BroadcastProgress(ProgressInfo{
+		ID:       p.taskID,
+		Name:     p.taskName,
+		Type:     string(p.Type),
+		Done:     done,
+		Total:    total,
+		Percent:  percent,
+		Timespec: time.Now().UnixMilli(),
+	})
 }
 
 func (p *Progress) IncrementDone() {
 	p.mu.Lock()
-	defer p.mu.Unlock()
 	p.Done++
+	done, total := p.Done, p.Total
+	p.mu.Unlock()
+
+	percent := 0
+	if total > 0 {
+		percent = int(done * 100 / total)
+	}
+	BroadcastProgress(ProgressInfo{
+		ID:       p.taskID,
+		Name:     p.taskName,
+		Type:     string(p.Type),
+		Done:     done,
+		Total:    total,
+		Percent:  percent,
+		Timespec: time.Now().UnixMilli(),
+	})
 }
 
 func (p *Progress) GetProgress() (done, total int64) {

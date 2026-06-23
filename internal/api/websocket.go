@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -32,7 +31,8 @@ var upgrader = websocket.Upgrader{
 
 // ProgressWS 是 /api/tasks/progress 的 WebSocket 端点。
 // 每个连接两路输出：
-//   - ticker 每秒推一次"所有任务进度快照"，用于前端进度条
+//   - 连接建立时发送一次"所有任务进度快照"作为初始状态
+//   - progressCh 接收 controller.BroadcastProgress 推来的单条进度
 //   - msgCh 接收 controller.BroadcastMessage 推来的事件文案
 //
 // 任一写失败即视为客户端断开，整个 handler 返回，监听器随 defer 注销。
@@ -44,8 +44,17 @@ func ProgressWS(c *gin.Context) {
 	defer conn.Close()
 
 	ctrl := controller.GetController()
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
+
+	// 连接建立时发送一次全量快照
+	initProgress := ctrl.GetAllProgress()
+	data, _ := json.Marshal(initProgress)
+	if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
+		return
+	}
+
+	progressCh := make(chan controller.ProgressInfo, 10)
+	controller.AddProgressListener(progressCh)
+	defer controller.RemoveProgressListener(progressCh)
 
 	msgCh := make(chan controller.Message, 10)
 	controller.AddMessageListener(msgCh)
@@ -53,9 +62,8 @@ func ProgressWS(c *gin.Context) {
 
 	for {
 		select {
-		case <-ticker.C:
-			progress := ctrl.GetAllProgress()
-			data, _ := json.Marshal(progress)
+		case info := <-progressCh:
+			data, _ := json.Marshal(info)
 			if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
 				return
 			}

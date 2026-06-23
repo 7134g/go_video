@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"sync"
+	"time"
 )
 
 var (
@@ -105,11 +106,12 @@ func (c *DownloadController) DeleteTaskFiles(name string, taskType TaskType) err
 	return nil
 }
 
-func (c *DownloadController) AddTask(id uint, name, url, headerJSON, taskType string) error {
+// addTaskInternal 解析 JSON Header、创建 context、构造 DTask 并存入 tasks map。
+func (c *DownloadController) addTaskInternal(id uint, name, url, headerJSON, taskType string) (*DTask, error) {
 	header := http.Header{}
 	if headerJSON != "" {
 		if err := json.Unmarshal([]byte(headerJSON), &header); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -120,7 +122,7 @@ func (c *DownloadController) AddTask(id uint, name, url, headerJSON, taskType st
 		URL:      url,
 		Header:   header,
 		Type:     TaskType(taskType),
-		Progress: &Progress{Type: TaskType(taskType)},
+		Progress: &Progress{taskID: id, taskName: name, Type: TaskType(taskType)},
 		ctx:      ctx,
 		cancel:   cancel,
 	}
@@ -129,37 +131,27 @@ func (c *DownloadController) AddTask(id uint, name, url, headerJSON, taskType st
 	c.tasks[id] = task
 	c.mu.Unlock()
 
+	return task, nil
+}
+
+func (c *DownloadController) AddTask(id uint, name, url, headerJSON, taskType string) error {
+	_, err := c.addTaskInternal(id, name, url, headerJSON, taskType)
+	if err != nil {
+		return err
+	}
 	BroadcastMessage(id, "任务已添加: "+name)
 	return nil
 }
 
 func (c *DownloadController) AddAndStart(id uint, name, url, headerJSON, taskType string, callback TaskCallback) error {
-	header := http.Header{}
-	if headerJSON != "" {
-		if err := json.Unmarshal([]byte(headerJSON), &header); err != nil {
-			return err
-		}
+	task, err := c.addTaskInternal(id, name, url, headerJSON, taskType)
+	if err != nil {
+		return err
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	task := &DTask{
-		ID:       id,
-		Name:     name,
-		URL:      url,
-		Header:   header,
-		Type:     TaskType(taskType),
-		Progress: &Progress{Type: TaskType(taskType)},
-		ctx:      ctx,
-		cancel:   cancel,
-	}
-
-	c.mu.Lock()
-	c.tasks[id] = task
-	c.mu.Unlock()
-
 	task.callback = callback
 	c.taskQueue <- task
 	BroadcastMessage(id, "任务已添加并启动: "+name)
+	BroadcastProgress(buildProgressInfo(task))
 	return nil
 }
 
@@ -250,6 +242,7 @@ func (c *DownloadController) StartAll(callback TaskCallback) {
 	for _, task := range tasks {
 		task.callback = callback
 		c.taskQueue <- task
+		BroadcastProgress(buildProgressInfo(task))
 	}
 }
 
@@ -263,6 +256,7 @@ func (c *DownloadController) StartTask(id uint, callback TaskCallback) error {
 	BroadcastMessage(id, "任务已启动: "+task.Name)
 	task.callback = callback
 	c.taskQueue <- task
+	BroadcastProgress(buildProgressInfo(task))
 	return nil
 }
 
@@ -292,12 +286,30 @@ func (c *DownloadController) runTask(task *DTask, callback TaskCallback) {
 }
 
 type ProgressInfo struct {
-	ID      uint   `json:"id"`
-	Name    string `json:"name"`
-	Type    string `json:"type"`
-	Done    int64  `json:"done"`
-	Total   int64  `json:"total"`
-	Percent int    `json:"percent"`
+	ID       uint   `json:"id"`
+	Name     string `json:"name"`
+	Type     string `json:"type"`
+	Done     int64  `json:"done"`
+	Total    int64  `json:"total"`
+	Percent  int    `json:"percent"`
+	Timespec int64  `json:"timespec"` // 消息时间（毫秒）
+}
+
+func buildProgressInfo(task *DTask) ProgressInfo {
+	done, total := task.Progress.GetProgress()
+	percent := 0
+	if total > 0 {
+		percent = int(done * 100 / total)
+	}
+	return ProgressInfo{
+		ID:       task.ID,
+		Name:     task.Name,
+		Type:     string(task.Type),
+		Done:     done,
+		Total:    total,
+		Percent:  percent,
+		Timespec: time.Now().UnixMilli(),
+	}
 }
 
 func (c *DownloadController) GetAllProgress() []ProgressInfo {
@@ -306,19 +318,7 @@ func (c *DownloadController) GetAllProgress() []ProgressInfo {
 
 	result := make([]ProgressInfo, 0, len(c.tasks))
 	for _, t := range c.tasks {
-		done, total := t.Progress.GetProgress()
-		percent := 0
-		if total > 0 {
-			percent = int(done * 100 / total)
-		}
-		result = append(result, ProgressInfo{
-			ID:      t.ID,
-			Name:    t.Name,
-			Type:    string(t.Type),
-			Done:    done,
-			Total:   total,
-			Percent: percent,
-		})
+		result = append(result, buildProgressInfo(t))
 	}
 	return result
 }

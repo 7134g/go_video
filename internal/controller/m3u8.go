@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"go_video/pkg/m3u8"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
-	"sync/atomic"
+	"sync"
 )
 
 func convertHeaders(m map[string]string) http.Header {
@@ -71,15 +72,20 @@ func (c *DownloadController) downloadM3u8(task *DTask) error {
 	pool := c.downloadPool
 	c.mu.RUnlock()
 
-	var consecutiveErrors int32
-	errChan := make(chan error, 1)
+	type failedSegment struct {
+		idx  int
+		url  string
+		file string
+		seg  *m3u8.Segment
+		key  *m3u8.Key
+	}
+	var failedSegments []failedSegment
+	var failedMu sync.Mutex
+
 	group := pool.NewGroup()
 
 	for i, seg := range segments {
 		if task.ctx.Err() != nil {
-			break
-		}
-		if atomic.LoadInt32(&consecutiveErrors) >= int32(c.config.MaxConsecutiveErrors) {
 			break
 		}
 
@@ -99,16 +105,22 @@ func (c *DownloadController) downloadM3u8(task *DTask) error {
 		segKey := key
 
 		group.Submit(downloadURL, func() error {
-			if err := c.downloadSegment(task.ctx, downloadURL, file, task.Header, segment, segKey, parsed.MediaSequence); err != nil {
-				atomic.AddInt32(&consecutiveErrors, 1)
-				select {
-				case errChan <- fmt.Errorf("segment %d failed: %w", idx, err):
-				default:
+			for attempt := 0; attempt < 3; attempt++ {
+				if task.ctx.Err() != nil {
+					return nil
 				}
-				return err
+				if err := c.downloadSegment(task.ctx, downloadURL, file, task.Header, segment, segKey, parsed.MediaSequence); err != nil {
+					if attempt == 2 {
+						failedMu.Lock()
+						failedSegments = append(failedSegments, failedSegment{idx, downloadURL, file, segment, segKey})
+						failedMu.Unlock()
+						log.Printf("分片 %d 下载失败（已重试3次）: url=%s file=%s err=%v", idx, downloadURL, file, err)
+					}
+					continue
+				}
+				task.Progress.IncrementDone()
+				return nil
 			}
-			atomic.StoreInt32(&consecutiveErrors, 0)
-			task.Progress.IncrementDone()
 			return nil
 		})
 	}
@@ -120,12 +132,31 @@ func (c *DownloadController) downloadM3u8(task *DTask) error {
 		return context.Canceled
 	}
 
-	if atomic.LoadInt32(&consecutiveErrors) >= int32(c.config.MaxConsecutiveErrors) {
-		select {
-		case err := <-errChan:
-			return fmt.Errorf("max consecutive errors reached: %w", err)
-		default:
-			return fmt.Errorf("max consecutive errors reached")
+	if len(failedSegments) > 0 {
+		BroadcastMessage(task.ID, fmt.Sprintf("重试 %d 个失败分片...", len(failedSegments)))
+		var stillFailed []failedSegment
+		for _, fs := range failedSegments {
+			var lastErr error
+			success := false
+			for attempt := 0; attempt < 10; attempt++ {
+				if task.ctx.Err() != nil {
+					break
+				}
+				if err := c.downloadSegment(task.ctx, fs.url, fs.file, task.Header, fs.seg, fs.key, parsed.MediaSequence); err != nil {
+					lastErr = err
+					continue
+				}
+				task.Progress.IncrementDone()
+				success = true
+				break
+			}
+			if !success {
+				stillFailed = append(stillFailed, fs)
+				log.Printf("分片 %d 最终失败（共重试13次）: url=%s file=%s err=%v", fs.idx, fs.url, fs.file, lastErr)
+			}
+		}
+		if len(stillFailed) > 0 {
+			return fmt.Errorf("%d 个分片下载失败，已重试13次", len(stillFailed))
 		}
 	}
 
