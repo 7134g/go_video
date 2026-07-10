@@ -60,7 +60,7 @@ HTTP API (internal/api) → Service (internal/service) → Controller (internal/
 - **WebTree / `X-Tab-Id`**：MITM 按 `X-Tab-Id` 请求头分桶记录每个 Tab 出现过的 URL，并从 HTML 响应中即时提取 `<title>` 后只保留标题字符串（不缓存 body），整体由 `sync.Mutex` 串行化、按 LRU 限容（默认 64 个 Tab）。`POST /api/tasks/update-title` 复用此缓存重新刷新已有任务的名称。
 - **任务状态枚举** (`model.TaskStatus`)：Pending=0, Running=1, Completed=2, Failed=3, Paused=4。启动时 `repo.ResetStatus()` 会把残留的 Running 置回 Pending。
 - **task.txt 批量导入**：`importTaskFile(cfg.DefaultHeaders)` 在启动时读取 `task.txt`，按行解析（跳过空行，奇数行为名称、偶数行为 URL），根据后缀判定 Type（`.mp4` → `"mp4"`，其余 → `"m3u8"`），URL 去重后写入数据库，完成后删除文件。无文件则静默跳过。单行失败不阻断其余任务。
-- **ffmpeg**：合并 M3U8 分段优先使用**纯 Go** remux（`pkg/m3u8/remux.go` 的 `MergeFilesNative`，基于 `github.com/yapingcat/gomedia` 做 TS→MP4 容器转换，不依赖外部二进制）；失败时自动回退到项目根目录下的 `ffmpeg` 二进制（`MergeFilesFfmpeg`）。若 ffmpeg 也不存在则提示用户下载到当前目录。
+- **ffmpeg**：合并 M3U8 分段使用 ffmpeg concat demuxer（`MergeFilesFfmpeg`），ffmpeg 需放在项目根目录。
 
 ### 配置项（config.json）
 
