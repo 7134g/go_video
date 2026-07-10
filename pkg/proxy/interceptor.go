@@ -20,7 +20,13 @@ func HasExactlyOneHttp(input string) bool {
 	return len(re.FindAllString(input, -1)) == 1
 }
 
-func GetVideo(u *url.URL) (string, bool) {
+// GetVideo 判断响应是否为视频。
+// 优先读取 body 第一行是否为 "#EXTM3U"（M3U8 标准格式），再回退到 URL 后缀判断。
+func GetVideo(u *url.URL, body []byte) (string, bool) {
+	if isExtM3U(body) {
+		return "m3u8", true
+	}
+
 	switch {
 	case strings.HasSuffix(u.Path, ".m3u8"):
 		return "m3u8", true
@@ -28,6 +34,16 @@ func GetVideo(u *url.URL) (string, bool) {
 		return "mp4", true
 	}
 	return "", false
+}
+
+// isExtM3U 检查 body 第一行是否为 "#EXTM3U"，符合 m3u8 标准。
+func isExtM3U(body []byte) bool {
+	if len(body) == 0 {
+		return false
+	}
+	firstLine := string(bytes.SplitN(body, []byte("\n"), 2)[0])
+	firstLine = strings.TrimRight(firstLine, "\r")
+	return firstLine == "#EXTM3U"
 }
 
 func Capture(req *http.Request) *VideoTask {

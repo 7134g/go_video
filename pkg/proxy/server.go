@@ -124,9 +124,7 @@ func (s *Server) ModifyResponse(res *http.Response) error {
 	}
 
 	var isVideo bool
-	// 判断url类型
-	// todo GetVideo判断url是否为m3u8应该读取body里的内容第一行是否为“#EXTM3U”，才符合m3u8标准，来判断是不是M3U8 索引文件
-	videoType, ok := GetVideo(u)
+	videoType, ok := GetVideo(u, body)
 	if ok {
 		switch videoType {
 		case "mp4":
