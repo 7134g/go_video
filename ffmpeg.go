@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"go_video/internal/ffmpeg"
+	"go_video/internal/downloader"
 	"go_video/internal/service"
 	"os"
 	"strings"
@@ -14,15 +14,15 @@ import (
 // 用户选择“否”会被记住（写入 config.json），下次启动不再追问；成功下载后文件已存在，
 // 自然不会再问。ffmpeg 仅作合并兜底：默认用纯 Go remux，遇到非 H264/H265 + AAC/MP3 的片源才需要它。
 func ensureFfmpeg(svr *service.ConfigService) {
-	if ffmpeg.Exists() {
+	if downloader.Exists() {
 		return
 	}
 	if svr.GetConfig().FfmpegPromptDeclined {
 		return // 用户此前已选择不下载，不再追问
 	}
 
-	name := ffmpeg.Name()
-	if !ffmpeg.Supported() {
+	name := downloader.Name()
+	if !downloader.Supported() {
 		fmt.Printf("未检测到 %s，且当前平台不支持自动下载，部分视频格式可能无法合并。\n", name)
 		return
 	}
@@ -37,9 +37,9 @@ func ensureFfmpeg(svr *service.ConfigService) {
 		return
 	}
 
-	fmt.Printf("正在下载 ffmpeg: %s\n", ffmpeg.URL())
-	if err := ffmpeg.Download(context.Background()); err != nil {
-		fmt.Printf("下载失败: %v\n请手动从 %s 下载 %s 放到程序目录\n", err, ffmpeg.URL(), name)
+	fmt.Printf("正在下载 ffmpeg: %s\n", downloader.URL())
+	if err := downloader.Download(context.Background()); err != nil {
+		fmt.Printf("下载失败: %v\n请手动从 %s 下载 %s 放到程序目录\n", err, downloader.URL(), name)
 		return
 	}
 	fmt.Printf("ffmpeg 已安装。\n")
