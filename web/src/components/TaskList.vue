@@ -75,9 +75,9 @@
 
       <div class="ws-log">
         <div class="ws-header">
-          <span>WebSocket 日志</span>
+          <span>{{ isWails ? '事件日志' : 'WebSocket 日志' }}</span>
           <el-tag :type="wsConnected ? 'success' : 'danger'" size="small">{{ wsConnected ? '已连接' : '未连接' }}</el-tag>
-          <el-button size="small" @click="wsLogs = []">清空</el-button>
+          <el-button size="small" @click="wsLogs = []; taskProgressList = []">清空</el-button>
         </div>
         <div class="ws-content" ref="logContainer">
           <div v-for="(log, i) in wsLogs" :key="i" class="ws-line">
@@ -287,6 +287,7 @@ function addLog(data: string) {
 onMounted(async () => {
   loadTasks()
   if (isWails) {
+    wsConnected.value = true
     const initialProgress = await getInitialProgress()
     if (initialProgress && initialProgress.length > 0) {
       taskProgressList.value = initialProgress
