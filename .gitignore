@@ -1,5 +1,6 @@
 .idea
 .vscode
+.claude/settings.local.json
 
 downloads
 histroy
@@ -11,10 +12,12 @@ go_video
 go_video.exe
 install_cert
 install_cert.exe
-uninstall-cert.exe
+uninstall_cert
+uninstall_cert.exe
 config.json
 ca.crt
 ca.key
+key.pem
 
 web/node_modules
 web/dist
