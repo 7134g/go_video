@@ -4,8 +4,8 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"go_video/internal/downloader"
 	"go_video/internal/service"
+	"go_video/pkg/downloader"
 	"os"
 	"strings"
 )

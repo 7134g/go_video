@@ -51,7 +51,7 @@
 import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
-import { configApi, ffmpegApi, type Config, type FfmpegStatus } from '../api/config'
+import { configApi, ffmpegApi, type Config, type FfmpegStatus } from '../api'
 
 const props = defineProps<{ modelValue: boolean }>()
 const emit = defineEmits(['update:modelValue', 'close'])

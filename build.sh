@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+if [ "$1" = "--desktop" ]; then
+  exec bash "$(dirname "$0")/build_desktop.sh"
+fi
+
 echo "开始编译下载器ui"
 cd web && npm run build && cd ..
 mkdir -p build

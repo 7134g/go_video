@@ -96,9 +96,10 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { taskApi, type Task } from '../api/task'
+import { taskApi, type Task } from '../api'
 import TaskForm from './TaskForm.vue'
 import ConfigDialog from './ConfigDialog.vue'
+import { useWailsEvents } from '../composables/useWailsEvents'
 
 const tasks = ref<Task[]>([])
 const loading = ref(false)
@@ -122,6 +123,22 @@ const logContainer = ref<HTMLElement>()
 let ws: WebSocket | null = null
 let retryCount = 0
 let refreshTimer: number | null = null
+
+const { isWails, getInitialProgress } = useWailsEvents({
+  onProgress: (data) => {
+    addLog(JSON.stringify(data))
+    const idx = taskProgressList.value.findIndex(t => t.id === data.id)
+    if (idx >= 0) {
+      taskProgressList.value[idx] = data
+    } else {
+      taskProgressList.value.push(data)
+    }
+    progress.value[data.id] = data.percent
+  },
+  onBroadcast: (data) => {
+    addLog(JSON.stringify(data))
+  },
+})
 
 const statusText = (s: number) => ['待执行', '执行中', '完成', '失败', '已暂停'][s]
 const statusType = (s: number) => {
@@ -267,12 +284,25 @@ function addLog(data: string) {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   loadTasks()
-  connectWS()
-  refreshTimer = window.setInterval(() => {
-    if (wsConnected.value) loadTasks()
-  }, 5000)
+  if (isWails) {
+    const initialProgress = await getInitialProgress()
+    if (initialProgress && initialProgress.length > 0) {
+      taskProgressList.value = initialProgress
+      for (const item of initialProgress) {
+        progress.value[item.id] = item.percent
+      }
+    }
+    refreshTimer = window.setInterval(() => {
+      loadTasks()
+    }, 5000)
+  } else {
+    connectWS()
+    refreshTimer = window.setInterval(() => {
+      if (wsConnected.value) loadTasks()
+    }, 5000)
+  }
 })
 
 onUnmounted(() => {

@@ -28,7 +28,7 @@
 import { ref, watch } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
-import { taskApi, type Task } from '../api/task'
+import { taskApi, type Task } from '../api'
 
 const props = defineProps<{ modelValue: boolean; task?: Task }>()
 const emit = defineEmits<{ 'update:modelValue': [v: boolean]; success: []; close: [] }>()
