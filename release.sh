@@ -1,11 +1,7 @@
 #!/bin/bash
 set -e
 
-if [ "$1" = "--desktop" ]; then
-  exec bash "$(dirname "$0")/build_desktop.sh"
-fi
-
-echo "开始编译下载器ui"
+echo "开始编译下载器UI"
 cd web && npm run build && cd ..
 mkdir -p build
 
@@ -53,8 +49,9 @@ download_ffmpeg() {
   echo "已下载 ffmpeg -> build/$FFMPEG"
 }
 
-echo "开始编译下载器"
-go build -o "build/go_video${EXT}"
+echo "开始编译 Wails 桌面应用"
+wails build -tags desktop -o "desktop${EXT}"
+mv "build/bin/desktop${EXT}" "build/desktop${EXT}"
 
 if [ -f "$FFMPEG" ]; then
   cp "$FFMPEG" build/

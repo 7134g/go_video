@@ -12,7 +12,7 @@ cd web && npm run dev             # Vite 开发服务器，将 /api 和 WebSocke
 go build . && ./go_video          # 主程序（在 :8080 提供嵌入的 Vue SPA + API）
 
 # 一次性发布构建（Windows 目标，产物在 build/）：web 构建 + 主程序 + 证书安装器 + 拷贝 ffmpeg.exe
-./build.sh
+./release.sh
 
 # 其他常用命令
 go build ./cmd/proxy && ./proxy   # CA 证书安装工具（cmd/proxy 仅 Windows，依赖 golang.org/x/sys/windows；需管理员权限）
