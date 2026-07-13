@@ -56,6 +56,14 @@
 
       <TaskForm v-model="showForm" :task="editTask" @success="loadTasks" @close="editTask = undefined" />
       <ConfigDialog v-model="showConfig" />
+
+      <div class="ca-status">
+        <span :class="caInstalled === null ? '' : (caInstalled ? 'ca-installed' : 'ca-not-installed')">
+          <template v-if="caInstalled === null">正在检查 CA 状态...</template>
+          <template v-else-if="caInstalled">✓ CA 已经安装</template>
+          <template v-else>✗ CA 未安装，打开安装位置双击 install_cert.exe</template>
+        </span>
+      </div>
     </div>
 
     <div class="right-panel">
@@ -96,7 +104,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { taskApi, type Task } from '../api'
+import { taskApi, caApi, type Task } from '../api'
 import TaskForm from './TaskForm.vue'
 import ConfigDialog from './ConfigDialog.vue'
 import { useWailsEvents } from '../composables/useWailsEvents'
@@ -106,6 +114,7 @@ const loading = ref(false)
 const showForm = ref(false)
 const showConfig = ref(false)
 const editTask = ref<Task>()
+const caInstalled = ref<boolean | null>(null)
 const statusFilter = ref<number>()
 const progress = ref<Record<number, number>>({})
 interface TaskProgress {
@@ -221,6 +230,15 @@ async function handleUpdateTitle(id: number) {
   loadTasks()
 }
 
+async function checkCaStatus() {
+  try {
+    const { data } = await caApi.status()
+    caInstalled.value = data.installed
+  } catch {
+    caInstalled.value = false
+  }
+}
+
 function connectWS() {
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
   ws = new WebSocket(`${protocol}//${location.host}/api/tasks/progress`)
@@ -285,6 +303,7 @@ function addLog(data: string) {
 }
 
 onMounted(async () => {
+  checkCaStatus()
   loadTasks()
   if (isWails) {
     wsConnected.value = true
@@ -423,4 +442,12 @@ onUnmounted(() => {
   text-align: center;
   padding: 20px;
 }
+.ca-status {
+  margin-top: 16px;
+  padding: 8px 0;
+  font-size: 13px;
+  border-top: 1px solid #dcdfe6;
+}
+.ca-installed { color: #67c23a; }
+.ca-not-installed { color: #f56c6c; }
 </style>

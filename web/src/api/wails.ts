@@ -100,3 +100,10 @@ export const ffmpegApi = {
     return { data }
   },
 }
+
+export const caApi = {
+  status: async () => {
+    const res = await fetch('/api/ca/status')
+    return { data: await res.json() }
+  },
+}

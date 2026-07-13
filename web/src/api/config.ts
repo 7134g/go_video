@@ -9,6 +9,7 @@ export interface Config {
   interceptor_enabled: boolean
   agent_address: string
     vpn_address: string
+  vpn_status: boolean
 }
 
 export const configApi = {
@@ -25,4 +26,12 @@ export const ffmpegApi = {
   status: () => request.get<FfmpegStatus>('/ffmpeg/status'),
   // 下载耗时较长（数十 MB），放宽超时到 5 分钟。
   download: () => request.post<{ exists: boolean }>('/ffmpeg/download', null, { timeout: 300000 }),
+}
+
+export interface CaStatus {
+  installed: boolean
+}
+
+export const caApi = {
+  status: () => request.get<CaStatus>('/ca/status'),
 }

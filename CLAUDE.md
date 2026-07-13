@@ -15,7 +15,7 @@ go build . && ./go_video          # 主程序（在 :8080 提供嵌入的 Vue SP
 ./release.sh
 
 # 其他常用命令
-go build ./cmd/proxy && ./proxy   # CA 证书安装工具（cmd/proxy 仅 Windows，依赖 golang.org/x/sys/windows；需管理员权限）
+go build ./cmd/install-cert && ./install-cert   # CA 证书安装工具（cmd/install-cert 仅 Windows，依赖 golang.org/x/sys/windows；需管理员权限）
 go test ./...                     # 运行所有测试（主要在 pkg/m3u8/）
 ```
 

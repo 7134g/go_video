@@ -60,6 +60,9 @@ func main() {
 	r.GET("/api/ffmpeg/status", ffmpegHandler.Status)
 	r.POST("/api/ffmpeg/download", ffmpegHandler.Download)
 
+	caHandler := api.NewCaHandler()
+	r.GET("/api/ca/status", caHandler.Status)
+
 	distFS, err := fs.Sub(webFS, "web/dist")
 	if err != nil {
 		log.Fatal("Failed to load web files:", err)

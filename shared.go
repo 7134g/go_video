@@ -3,17 +3,17 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"go_video/pkg/proxy"
 	"log"
 	"net/http"
 	"os"
+	"runtime"
 	"strings"
 
 	"go_video/internal/controller"
 	"go_video/internal/model"
 	"go_video/internal/repository"
 	"go_video/internal/service"
-	"go_video/pkg/proxy"
-	"runtime"
 )
 
 func InitCa() {
@@ -41,7 +41,6 @@ func initShared() *service.ConfigService {
 	if err := repository.InitDB(); err != nil {
 		log.Fatal("Failed to init database:", err)
 	}
-	InitCa()
 
 	svr := service.GetConfigService()
 	cfg := svr.GetConfig()

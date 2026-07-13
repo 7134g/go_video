@@ -60,7 +60,10 @@ else
 fi
 
 echo "编译证书注册器"
-go build -o "build/install_cert${EXT}" ./cmd/proxy
+go build -o "build/install_cert${EXT}" ./cmd/install-cert
+
+echo "编译证书卸载器"
+go build -o "build/uninstall_cert${EXT}" ./cmd/uninstall-cert
 
 echo "拷贝 Chrome 扩展"
 rm -rf build/chrome_ext

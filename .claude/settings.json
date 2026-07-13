@@ -1,0 +1,26 @@
+{
+  "cleanupPeriodDays": 60,
+  "showStatusline": true,
+  "verbose": true,
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(go build:*)",
+      "Bash(go test:*)",
+      "Bash(grep:*)",
+      "Bash(wc:*)",
+      "Bash(sed:*)",
+      "Bash(cd:*)",
+      "Bash(cp:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(openspec:*)"
+    ],
+    "deny": [
+    ],
+    "additionalDirectories": [
+      "./",
+      "go_video/"
+    ]
+  }
+}

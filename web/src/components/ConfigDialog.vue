@@ -23,11 +23,14 @@
           <el-button type="primary" size="small" @click="addHeader">添加请求头</el-button>
         </div>
       </el-form-item>
-      <el-form-item label="启用拦截器">
+      <el-form-item label="是否拦截器">
         <el-switch v-model="form.interceptor_enabled" />
       </el-form-item>
-      <el-form-item label="拦截代理地址">
+      <el-form-item label="拦截器代理地址">
         <el-input v-model="form.agent_address" placeholder="127.0.0.1:9999" />
+      </el-form-item>
+      <el-form-item label="是否HTTP代理">
+        <el-switch v-model="form.vpn_status" />
       </el-form-item>
       <el-form-item label="HTTP代理地址">
         <el-input v-model="form.vpn_address" placeholder="127.0.0.1:7890" />
@@ -69,7 +72,8 @@ const form = ref<Config>({
   default_headers: {},
   interceptor_enabled: false,
   agent_address: '127.0.0.1:9999',
-  vpn_address: ''
+  vpn_address: '',
+  vpn_status: false
 })
 
 watch(() => props.modelValue, async (val) => {
