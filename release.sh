@@ -52,6 +52,7 @@ download_ffmpeg() {
 echo "开始编译 Wails 桌面应用"
 wails build -tags desktop -o "desktop${EXT}"
 mv "build/bin/desktop${EXT}" "build/desktop${EXT}"
+rmdir "build/bin"
 
 if [ -f "$FFMPEG" ]; then
   cp "$FFMPEG" build/
@@ -60,10 +61,10 @@ else
 fi
 
 echo "编译证书注册器"
-go build -o "build/install_cert${EXT}" ./cmd/install-cert
+go build -o "build/install_cert${EXT}" ./tool/install-cert
 
 echo "编译证书卸载器"
-go build -o "build/uninstall_cert${EXT}" ./cmd/uninstall-cert
+go build -o "build/uninstall_cert${EXT}" ./tool/uninstall-cert
 
 echo "拷贝 Chrome 扩展"
 rm -rf build/chrome_ext
