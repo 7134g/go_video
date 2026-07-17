@@ -2,7 +2,7 @@
   <div class="page-container">
     <div class="main-content">
       <div class="toolbar">
-        <el-button type="primary" @click="loadTasks">刷新</el-button>
+        <el-button type="primary" @click="reflashTasks">刷新</el-button>
         <el-button type="primary" @click="showForm = true">新建任务</el-button>
         <el-button type="success" @click="handleStart">开始下载</el-button>
         <el-button type="warning" @click="handleStopAll">暂停全部</el-button>
@@ -58,11 +58,11 @@
       <ConfigDialog v-model="showConfig" />
 
       <div class="ca-status">
-        <span :class="caInstalled === null ? '' : (caInstalled ? 'ca-installed' : 'ca-not-installed')">
-          <template v-if="caInstalled === null">正在检查 CA 状态...</template>
-          <template v-else-if="caInstalled">✓ CA 已经安装</template>
-          <template v-else>✗ CA 未安装，打开安装位置双击 install_cert.exe</template>
-        </span>
+    <span :class="caInstalled === null ? '' : (caInstalled ? 'ca-installed' : 'ca-not-installed')">
+      <template v-if="caInstalled === null">正在检查 CA 状态...</template>
+      <template v-else-if="caInstalled">✓ CA 已经安装</template>
+      <template v-else>✗ CA 未安装，打开安装位置双击 install_cert.exe</template>
+    </span>
       </div>
     </div>
 
@@ -153,6 +153,11 @@ const statusText = (s: number) => ['待执行', '执行中', '完成', '失败',
 const statusType = (s: number) => {
   const types = ['info', 'warning', 'success', 'danger', 'info'] as const
   return types[s]
+}
+
+async function reflashTasks() {
+  checkCaStatus()
+  loadTasks()
 }
 
 async function loadTasks() {

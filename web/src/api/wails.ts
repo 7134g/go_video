@@ -19,6 +19,7 @@ interface WailsApp {
   DownloadFfmpeg(): Promise<{ exists: boolean }>
   UpdateTaskTitle(id: number): Promise<any>
   GetAllProgress(): Promise<any[]>
+  CheckCaInstalled(): Promise<{ installed: boolean; error?: string }>
 }
 
 function app(): WailsApp {
@@ -103,7 +104,7 @@ export const ffmpegApi = {
 
 export const caApi = {
   status: async () => {
-    const res = await fetch('/api/ca/status')
-    return { data: await res.json() }
+    const data = await app().CheckCaInstalled()
+    return { data }
   },
 }

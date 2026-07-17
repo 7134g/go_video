@@ -65,8 +65,12 @@ async function applyProxy() {
       },
       scope: "regular"
     });
+    await chrome.action.setBadgeText({ text: "ON" });
+    await chrome.action.setBadgeBackgroundColor({ color: "#4CAF50" });
   } else {
     await chrome.proxy.settings.clear({ scope: "regular" });
+    await chrome.action.setBadgeText({ text: "OFF" });
+    await chrome.action.setBadgeBackgroundColor({ color: "#9E9E9E" });
   }
 }
 
@@ -92,5 +96,38 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== "local") return;
   if ("proxyEnabled" in changes || "proxyHost" in changes || "proxyPort" in changes) {
     applyProxy();
+  }
+});
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "getProxyStatus") {
+    (async () => {
+      const cfg = { ...DEFAULTS, ...(await chrome.storage.local.get(DEFAULTS)) };
+      const rules = await chrome.declarativeNetRequest.getSessionRules();
+      sendResponse({
+        enabled: cfg.proxyEnabled,
+        host: cfg.proxyHost,
+        port: Number(cfg.proxyPort),
+        ruleCount: rules.length
+      });
+    })();
+    return true;
+  }
+
+  if (message.action === "toggleProxy") {
+    (async () => {
+      const cfg = { ...DEFAULTS, ...(await chrome.storage.local.get(DEFAULTS)) };
+      const newEnabled = !cfg.proxyEnabled;
+      await chrome.storage.local.set({ proxyEnabled: newEnabled });
+      await applyProxy();
+      const rules = await chrome.declarativeNetRequest.getSessionRules();
+      sendResponse({
+        enabled: newEnabled,
+        host: cfg.proxyHost,
+        port: Number(cfg.proxyPort),
+        ruleCount: rules.length
+      });
+    })();
+    return true;
   }
 });

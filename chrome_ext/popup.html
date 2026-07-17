@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>go_video proxy</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 280px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+      font-size: 13px;
+      color: #222;
+      padding: 16px;
+    }
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .indicator.on { background: #4CAF50; }
+    .indicator.off { background: #9E9E9E; }
+    .status-text { font-weight: 500; }
+    .address {
+      font-size: 12px;
+      color: #888;
+      margin: 2px 0 12px 16px;
+    }
+    .toggle-btn {
+      width: 100%;
+      padding: 8px 0;
+      border: 1px solid #d0d0d0;
+      border-radius: 4px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+    .toggle-btn:hover { background: #f5f5f5; }
+    .toggle-btn:active { background: #e8e8e8; }
+    .stat {
+      color: #888;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #eee;
+      margin: 8px 0;
+    }
+    .settings-link {
+      display: block;
+      text-align: center;
+      color: #666;
+      text-decoration: none;
+      font-size: 12px;
+      padding: 4px 0;
+      cursor: pointer;
+    }
+    .settings-link:hover { color: #1a73e8; }
+  </style>
+</head>
+<body>
+  <div class="status-row">
+    <span class="indicator" id="indicator"></span>
+    <span class="status-text" id="statusText">加载中...</span>
+  </div>
+  <div class="address" id="address"></div>
+
+  <button class="toggle-btn" id="toggleBtn">---</button>
+
+  <div class="stat" id="ruleStat">正在为 - 个 tab 注入 X-Tab-Id</div>
+
+  <hr>
+
+  <a class="settings-link" id="settingsLink">打开设置 ↗</a>
+
+  <script src="popup.js"></script>
+</body>
+</html>

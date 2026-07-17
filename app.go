@@ -159,6 +159,14 @@ func (a *App) RedownloadTask(id uint) error {
 	return a.svc.RedownloadTask(id)
 }
 
+func (a *App) CheckCaInstalled() map[string]any {
+	installed, err := proxy.CheckCertInstalled()
+	if err != nil {
+		return map[string]any{"installed": false, "error": err.Error()}
+	}
+	return map[string]any{"installed": installed}
+}
+
 func (a *App) GetAllProgress() []controller.ProgressInfo {
 	return a.ctrl.GetAllProgress()
 }

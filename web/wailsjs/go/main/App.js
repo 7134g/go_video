@@ -6,6 +6,10 @@ export function AddTask(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['AddTask'](arg1, arg2, arg3, arg4);
 }
 
+export function CheckCaInstalled() {
+  return window['go']['main']['App']['CheckCaInstalled']();
+}
+
 export function DeleteTask(arg1) {
   return window['go']['main']['App']['DeleteTask'](arg1);
 }

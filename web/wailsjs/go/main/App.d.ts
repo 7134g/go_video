@@ -5,6 +5,8 @@ import {controller} from '../models';
 
 export function AddTask(arg1:string,arg2:string,arg3:string,arg4:string):Promise<model.Task>;
 
+export function CheckCaInstalled():Promise<Record<string, any>>;
+
 export function DeleteTask(arg1:number):Promise<void>;
 
 export function DownloadFfmpeg():Promise<Record<string, boolean>>;

@@ -38,7 +38,7 @@
       <el-form-item label="ffmpeg" v-if="ffmpegStatus && !ffmpegStatus.exists">
         <template v-if="ffmpegStatus.supported">
           <el-button type="primary" :loading="downloadingFfmpeg" @click="handleDownloadFfmpeg">下载 ffmpeg</el-button>
-          <span style="margin-left: 8px; color: #909399; font-size: 12px;">用于合并部分特殊编码视频（默认走纯 Go 合并，非必需）</span>
+          <span style="margin-left: 8px; color: #909399; font-size: 12px;">用于合并部分特殊编码视频（必需）</span>
         </template>
         <span v-else style="color: #909399; font-size: 12px;">当前平台不支持自动下载，请手动安装 ffmpeg</span>
       </el-form-item>
