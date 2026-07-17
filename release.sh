@@ -70,5 +70,7 @@ echo "拷贝 Chrome 扩展"
 rm -rf build/chrome_ext
 cp -r chrome_ext build/chrome_ext
 
-echo "运行 go_video${EXT} 启动服务,访问 http://localhost:8080" > build/README.txt
+echo "拷贝 README.md"
+cp README.md build/README.md
+
 echo "完成"
