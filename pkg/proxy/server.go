@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"go_video/pkg/m3u8"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
@@ -52,7 +53,7 @@ func NewServer(vpnAddress string) (*Server, error) {
 
 	if vpnAddress != "" {
 		address := fmt.Sprintf("http://%s", vpnAddress)
-		fmt.Println("被动代理启动vpn: " + address)
+		slog.Info("被动代理启动vpn", "address", address)
 		proxyUrl, err := url.Parse(address)
 		if err != nil {
 			return nil, err
@@ -132,7 +133,7 @@ func (s *Server) ModifyResponse(res *http.Response) error {
 		case "m3u8":
 			_, err := m3u8.ParseM3u8Data(bytes.NewReader(body))
 			if err != nil {
-				fmt.Println("解析失败: ", u.String(), err, string(body))
+				slog.Warn("m3u8解析失败", "url", u.String(), "error", err, "body", string(body))
 			} else {
 				isVideo = true
 			}

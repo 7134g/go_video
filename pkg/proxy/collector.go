@@ -1,7 +1,7 @@
 package proxy
 
 import (
-	"fmt"
+	"log/slog"
 	"net/http"
 )
 
@@ -19,7 +19,7 @@ func NewCollector() *Collector {
 }
 
 func (c *Collector) Collect(req *http.Request, title, videoType string) {
-	fmt.Println("抓取到新任务: ", title, req.URL.String())
+	slog.Info("抓取到新任务", "title", title, "url", req.URL.String())
 	task := Capture(req)
 	task.Type = videoType
 	if title != "" {

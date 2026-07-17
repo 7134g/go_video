@@ -6,11 +6,10 @@ import (
 	"context"
 	"embed"
 	"errors"
-	"fmt"
 	"go_video/internal/api"
 	"go_video/internal/controller"
 	"io/fs"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -65,7 +64,8 @@ func main() {
 
 	distFS, err := fs.Sub(webFS, "web/dist")
 	if err != nil {
-		log.Fatal("Failed to load web files:", err)
+		slog.Error("加载 web 文件失败", "error", err)
+		os.Exit(1)
 	}
 	r.NoRoute(func(c *gin.Context) {
 		file, err := distFS.Open(c.Request.URL.Path[1:])
@@ -81,9 +81,10 @@ func main() {
 	httpSrv := &http.Server{Addr: "127.0.0.1:8080", Handler: r}
 
 	go func() {
-		fmt.Println("web地址 http://localhost:8080")
+		slog.Info("web地址 http://localhost:8080")
 		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatal("http server:", err)
+			slog.Error("http server error", "error", err)
+			os.Exit(1)
 		}
 	}()
 
@@ -91,13 +92,13 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println("shutting down...")
+	slog.Info("shutting down...")
 	controller.GetController().StopAll()
 	svr.Shutdown()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := httpSrv.Shutdown(ctx); err != nil {
-		log.Println("http shutdown:", err)
+		slog.Warn("http shutdown error", "error", err)
 	}
 }

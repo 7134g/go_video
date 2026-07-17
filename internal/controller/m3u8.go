@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"go_video/pkg/m3u8"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -114,7 +114,7 @@ func (c *DownloadController) downloadM3u8(task *DTask) error {
 						failedMu.Lock()
 						failedSegments = append(failedSegments, failedSegment{idx, downloadURL, file, segment, segKey})
 						failedMu.Unlock()
-						log.Printf("分片 %d 下载失败（已重试3次）: url=%s file=%s err=%v", idx, downloadURL, file, err)
+						slog.Warn("分片下载失败（已重试3次）", "idx", idx, "url", downloadURL, "file", file, "error", err)
 					}
 					continue
 				}
@@ -152,7 +152,7 @@ func (c *DownloadController) downloadM3u8(task *DTask) error {
 			}
 			if !success {
 				stillFailed = append(stillFailed, fs)
-				log.Printf("分片 %d 最终失败（共重试13次）: url=%s file=%s err=%v", fs.idx, fs.url, fs.file, lastErr)
+				slog.Error("分片最终失败（共重试13次）", "idx", fs.idx, "url", fs.url, "file", fs.file, "error", lastErr)
 			}
 		}
 		if len(stillFailed) > 0 {

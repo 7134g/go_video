@@ -75,7 +75,6 @@ HTTP API (internal/api) → Service (internal/service) → Controller (internal/
 | `agent_address` | 代理监听地址 | `127.0.0.1:9999` |
 | `vpn_address` | 上游 HTTP 代理地址 | `127.0.0.1:7890` |
 | `gin_mode` | Gin 框架模式（main.go: 空字符串走 release，非空走 debug） | `release` |
-| `ffmpeg_prompt_declined` | 用户已拒绝启动时下载 ffmpeg，置 true 后不再追问 | false |
 
 
 # karpathy

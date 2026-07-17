@@ -3,8 +3,10 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"go_video/internal/logger"
 	"go_video/pkg/proxy"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"runtime"
@@ -44,7 +46,13 @@ func initShared() *service.ConfigService {
 
 	svr := service.GetConfigService()
 	cfg := svr.GetConfig()
-	ensureFfmpeg(svr)
+
+	pwd, err := os.Getwd()
+	if err != nil {
+		log.Fatal("Failed to get working directory:", err)
+	}
+	logger.InitWithLevel(cfg.LogLevel, pwd+"/"+logger.LogDir)
+
 	controller.GetController().ApplyConfig(
 		cfg.DownloadDir,
 		cfg.MaxConcurrentTasks,
@@ -63,7 +71,7 @@ func importTaskFile(defaultHeaders map[string]string) {
 		if os.IsNotExist(err) {
 			return
 		}
-		log.Println("读取 task.txt 失败:", err)
+		slog.Warn("读取 task.txt 失败", "error", err)
 		return
 	}
 
@@ -84,7 +92,7 @@ func importTaskFile(defaultHeaders map[string]string) {
 		url := lines[i+1]
 
 		if _, err := repo.GetByURL(url); err == nil {
-			log.Printf("task '%s' URL 已存在，跳过", name)
+			slog.Info("task URL 已存在，跳过", "name", name)
 			continue
 		}
 
@@ -108,11 +116,11 @@ func importTaskFile(defaultHeaders map[string]string) {
 		}
 
 		if err := repo.Create(task); err != nil {
-			log.Printf("导入任务 '%s' 失败: %v", name, err)
+			slog.Error("导入任务失败", "name", name, "error", err)
 		}
 	}
 
 	if err := os.Remove("task.txt"); err != nil {
-		log.Printf("删除 task.txt 失败(warning): %v", err)
+		slog.Warn("删除 task.txt 失败", "error", err)
 	}
 }

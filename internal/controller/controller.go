@@ -8,7 +8,7 @@ import (
 	"go_video/internal/model"
 	"go_video/internal/repository"
 	"go_video/pkg/downloader"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"sync"
@@ -179,7 +179,7 @@ func (c *DownloadController) StopTask(id uint) error {
 	if !ok {
 		task, err := c.repo.GetByID(id)
 		if err != nil {
-			log.Println(err)
+			slog.Error("获取任务失败", "id", id, "error", err)
 			return err
 		}
 		if task == nil {
@@ -266,13 +266,13 @@ func (c *DownloadController) runTask(task *DTask, callback TaskCallback) {
 	case TaskTypeMp4:
 		err = c.downloadMp4(task)
 		if err != nil {
-			log.Println("下载失败---", err.Error())
+			slog.Error("下载失败", "type", "mp4", "task", task.Name, "error", err)
 			break
 		}
 	case TaskTypeM3u8:
 		err = c.downloadM3u8(task)
 		if err != nil {
-			log.Println("下载失败...", err.Error())
+			slog.Error("下载失败", "type", "m3u8", "task", task.Name, "error", err)
 			break
 		}
 		if err := c.mergeM3u8(task); err != nil {

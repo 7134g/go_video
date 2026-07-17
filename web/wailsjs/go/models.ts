@@ -40,7 +40,6 @@ export namespace model {
 	    vpn_address: string;
 	    vpn_status: boolean;
 	    gin_mode: string;
-	    ffmpeg_prompt_declined: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Config(source);
@@ -58,7 +57,6 @@ export namespace model {
 	        this.vpn_address = source["vpn_address"];
 	        this.vpn_status = source["vpn_status"];
 	        this.gin_mode = source["gin_mode"];
-	        this.ffmpeg_prompt_declined = source["ffmpeg_prompt_declined"];
 	    }
 	}
 	export class Task {

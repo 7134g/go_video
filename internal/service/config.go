@@ -2,11 +2,11 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"go_video/internal/controller"
 	"go_video/internal/model"
 	"go_video/internal/repository"
 	"go_video/pkg/proxy"
+	"log/slog"
 	"os"
 	"sync"
 )
@@ -56,13 +56,6 @@ func (s *ConfigService) Shutdown() {
 
 func (s *ConfigService) GetConfig() *model.Config {
 	return s.repo.Get()
-}
-
-// SetFfmpegPromptDeclined 持久化“用户拒绝下载 ffmpeg”的选择，启动时据此跳过追问。
-func (s *ConfigService) SetFfmpegPromptDeclined(v bool) error {
-	cfg := s.repo.Get()
-	cfg.FfmpegPromptDeclined = v
-	return s.repo.Save(cfg)
 }
 
 func (s *ConfigService) UpdateConfig(updates map[string]interface{}) (*model.Config, error) {
@@ -173,11 +166,11 @@ func (s *ConfigService) handleInterceptor(cfg *model.Config) error {
 }
 
 func (s *ConfigService) startProxyServer(agentAddress, vpnAddress string) {
-	fmt.Println("开启被动代理 -> " + agentAddress)
+	slog.Info("开启被动代理", "address", agentAddress)
 
 	srv, err := proxy.NewServer(vpnAddress)
 	if err != nil {
-		fmt.Printf("代理服务器启动失败: %v\n", err)
+		slog.Error("代理服务器启动失败", "error", err)
 		s.mu.Lock()
 		s.proxyRunning = false
 		s.mu.Unlock()
@@ -189,7 +182,7 @@ func (s *ConfigService) startProxyServer(agentAddress, vpnAddress string) {
 
 	err = srv.Listen(agentAddress)
 	if err != nil {
-		fmt.Printf("代理监听失败: %v\n", err)
+		slog.Error("代理监听失败", "error", err)
 		s.mu.Lock()
 		s.proxyRunning = false
 		s.mu.Unlock()
@@ -217,7 +210,7 @@ func (s *ConfigService) doTask(srv *proxy.Server) {
 					_ = repo.UpdateNameAndHeader(existing.ID, t.Title, t.Headers)
 				}
 			default:
-				fmt.Printf("代理任务查重失败: %v\n", err)
+				slog.Error("代理任务查重失败", "error", err)
 			}
 
 		case <-srv.Stop:
