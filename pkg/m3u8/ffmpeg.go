@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"syscall"
 )
 
 // MergeFilesFfmpeg 使用 ffmpeg concat demuxer 把 savePath 下所有分段合并为 <dirName>.mp4。
@@ -66,7 +67,10 @@ func MergeFilesFfmpeg(savePath, ffmpeg string) error {
 	for _, s := range cmdList {
 		cmdString = fmt.Sprintf("%s %s", cmdString, s)
 	}
-	fmt.Println(cmdString)
+	//fmt.Println(cmdString)
 
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		HideWindow: true,
+	}
 	return cmd.Run()
 }
