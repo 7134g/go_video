@@ -35,6 +35,7 @@ export namespace model {
 	    download_dir: string;
 	    max_consecutive_errors: number;
 	    default_headers: Record<string, string>;
+	    log_level: string;
 	    interceptor_enabled: boolean;
 	    agent_address: string;
 	    vpn_address: string;
@@ -52,6 +53,7 @@ export namespace model {
 	        this.download_dir = source["download_dir"];
 	        this.max_consecutive_errors = source["max_consecutive_errors"];
 	        this.default_headers = source["default_headers"];
+	        this.log_level = source["log_level"];
 	        this.interceptor_enabled = source["interceptor_enabled"];
 	        this.agent_address = source["agent_address"];
 	        this.vpn_address = source["vpn_address"];
