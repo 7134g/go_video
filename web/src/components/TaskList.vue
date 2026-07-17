@@ -64,6 +64,20 @@
       <template v-else>✗ CA 未安装，打开安装位置双击 install_cert.exe</template>
     </span>
       </div>
+
+      <div class="ffmpeg-status">
+        <template v-if="ffmpegStatus === null">正在检查 ffmpeg 状态...</template>
+        <template v-else-if="ffmpegStatus.exists">
+          <span class="ffmpeg-installed">✓ ffmpeg 已就绪</span>
+        </template>
+        <template v-else>
+          <template v-if="ffmpegStatus.supported">
+            <el-button type="primary" size="small" :loading="downloadingFfmpeg" @click="handleDownloadFfmpeg">下载 ffmpeg</el-button>
+            <span style="margin-left: 8px; color: #909399; font-size: 12px;">用于合并视频（必需）</span>
+          </template>
+          <span v-else class="ffmpeg-not-installed">当前平台不支持自动下载，请手动安装 ffmpeg</span>
+        </template>
+      </div>
     </div>
 
     <div class="right-panel">
@@ -104,7 +118,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { taskApi, caApi, type Task } from '../api'
+import { taskApi, caApi, ffmpegApi, type Task } from '../api'
 import TaskForm from './TaskForm.vue'
 import ConfigDialog from './ConfigDialog.vue'
 import { useWailsEvents } from '../composables/useWailsEvents'
@@ -115,6 +129,8 @@ const showForm = ref(false)
 const showConfig = ref(false)
 const editTask = ref<Task>()
 const caInstalled = ref<boolean | null>(null)
+const ffmpegStatus = ref<{ exists: boolean; supported: boolean } | null>(null)
+const downloadingFfmpeg = ref(false)
 const statusFilter = ref<number>()
 const progress = ref<Record<number, number>>({})
 interface TaskProgress {
@@ -157,6 +173,7 @@ const statusType = (s: number) => {
 
 async function reflashTasks() {
   checkCaStatus()
+  checkFfmpegStatus()
   loadTasks()
 }
 
@@ -244,6 +261,28 @@ async function checkCaStatus() {
   }
 }
 
+async function checkFfmpegStatus() {
+  try {
+    const { data } = await ffmpegApi.status()
+    ffmpegStatus.value = data
+  } catch {
+    ffmpegStatus.value = null
+  }
+}
+
+async function handleDownloadFfmpeg() {
+  downloadingFfmpeg.value = true
+  try {
+    await ffmpegApi.download()
+    ElMessage.success('ffmpeg 下载完成')
+    await checkFfmpegStatus()
+  } catch (e: any) {
+    ElMessage.error('下载失败：' + (e?.response?.data?.error || e?.message || '未知错误'))
+  } finally {
+    downloadingFfmpeg.value = false
+  }
+}
+
 function connectWS() {
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
   ws = new WebSocket(`${protocol}//${location.host}/api/tasks/progress`)
@@ -309,6 +348,7 @@ function addLog(data: string) {
 
 onMounted(async () => {
   checkCaStatus()
+  checkFfmpegStatus()
   loadTasks()
   if (isWails) {
     wsConnected.value = true
@@ -455,4 +495,12 @@ onUnmounted(() => {
 }
 .ca-installed { color: #67c23a; }
 .ca-not-installed { color: #f56c6c; }
+.ffmpeg-status {
+  margin-top: 8px;
+  padding: 8px 0;
+  font-size: 13px;
+  border-top: 1px solid #dcdfe6;
+}
+.ffmpeg-installed { color: #67c23a; }
+.ffmpeg-not-installed { color: #f56c6c; }
 </style>

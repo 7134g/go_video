@@ -17,6 +17,7 @@
       "Bash(openspec:*)"
     ],
     "deny": [
+      "python"
     ],
     "additionalDirectories": [
       "./",

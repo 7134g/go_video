@@ -35,13 +35,6 @@
       <el-form-item label="HTTP代理地址">
         <el-input v-model="form.vpn_address" placeholder="127.0.0.1:7890" />
       </el-form-item>
-      <el-form-item label="ffmpeg" v-if="ffmpegStatus && !ffmpegStatus.exists">
-        <template v-if="ffmpegStatus.supported">
-          <el-button type="primary" :loading="downloadingFfmpeg" @click="handleDownloadFfmpeg">下载 ffmpeg</el-button>
-          <span style="margin-left: 8px; color: #909399; font-size: 12px;">用于合并部分特殊编码视频（必需）</span>
-        </template>
-        <span v-else style="color: #909399; font-size: 12px;">当前平台不支持自动下载，请手动安装 ffmpeg</span>
-      </el-form-item>
     </el-form>
     <template #footer>
       <el-button @click="visible = false">取消</el-button>
@@ -54,7 +47,7 @@
 import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
-import { configApi, ffmpegApi, type Config, type FfmpegStatus } from '../api'
+import { configApi, type Config } from '../api'
 
 const props = defineProps<{ modelValue: boolean }>()
 const emit = defineEmits(['update:modelValue', 'close'])
@@ -62,8 +55,6 @@ const emit = defineEmits(['update:modelValue', 'close'])
 const visible = ref(props.modelValue)
 const loading = ref(false)
 const saving = ref(false)
-const ffmpegStatus = ref<FfmpegStatus | null>(null)
-const downloadingFfmpeg = ref(false)
 const form = ref<Config>({
   max_concurrent_tasks: 3,
   max_segment_workers: 5,
@@ -80,7 +71,6 @@ watch(() => props.modelValue, async (val) => {
   visible.value = val
   if (val) {
     await loadConfig()
-    loadFfmpegStatus()
   }
 })
 
@@ -111,28 +101,6 @@ async function loadConfig() {
     form.value = data
   } finally {
     loading.value = false
-  }
-}
-
-async function loadFfmpegStatus() {
-  try {
-    const { data } = await ffmpegApi.status()
-    ffmpegStatus.value = data
-  } catch {
-    ffmpegStatus.value = null
-  }
-}
-
-async function handleDownloadFfmpeg() {
-  downloadingFfmpeg.value = true
-  try {
-    await ffmpegApi.download()
-    ElMessage.success('ffmpeg 下载完成')
-    await loadFfmpegStatus()
-  } catch (e: any) {
-    ElMessage.error('下载失败：' + (e?.response?.data?.error || e?.message || '未知错误'))
-  } finally {
-    downloadingFfmpeg.value = false
   }
 }
 
