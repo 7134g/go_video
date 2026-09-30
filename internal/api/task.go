@@ -63,6 +63,15 @@ func (h *TaskHandler) Delete(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "deleted"})
 }
 
+func (h *TaskHandler) ClearFinished(c *gin.Context) {
+	deleted, err := h.svc.ClearFinishedTasks()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"deleted": deleted})
+}
+
 type UpdateTaskReq struct {
 	ID     uint   `json:"id"`
 	Name   string `json:"name"`

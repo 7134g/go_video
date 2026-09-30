@@ -6,6 +6,7 @@
         <el-button type="primary" @click="showForm = true">新建任务</el-button>
         <el-button type="success" @click="handleStart">开始下载</el-button>
         <el-button type="warning" @click="handleStopAll">暂停全部</el-button>
+        <el-button type="danger" plain :loading="clearing" @click="handleClearFinished">清空已结束</el-button>
       </div>
 
       <div>
@@ -131,6 +132,7 @@ const editTask = ref<Task>()
 const caInstalled = ref<boolean | null>(null)
 const ffmpegStatus = ref<{ exists: boolean; supported: boolean } | null>(null)
 const downloadingFfmpeg = ref(false)
+const clearing = ref(false)
 const statusFilter = ref<number>()
 const progress = ref<Record<number, number>>({})
 interface TaskProgress {
@@ -240,6 +242,24 @@ async function handleStopAll() {
   await taskApi.stopAll()
   ElMessage.success('已停止所有任务')
   loadTasks()
+}
+
+async function handleClearFinished() {
+  try {
+    await ElMessageBox.confirm('将删除所有已完成和失败的任务记录，磁盘上已下载的文件会保留。此操作不可恢复。', '提示', { type: 'warning' })
+  } catch {
+    return
+  }
+  clearing.value = true
+  try {
+    const { data } = await taskApi.clearFinished()
+    ElMessage.success(`已清空 ${data.deleted} 条记录`)
+    loadTasks()
+  } catch (e: any) {
+    ElMessage.error('清空失败：' + (e?.response?.data?.error || e?.message || '未知错误'))
+  } finally {
+    clearing.value = false
+  }
 }
 
 async function handleUpdateTitle(id: number) {

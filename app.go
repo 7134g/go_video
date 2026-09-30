@@ -64,6 +64,12 @@ func (a *App) DeleteTask(id uint) error {
 	return a.svc.Delete(id)
 }
 
+// ClearFinishedTasks 删除所有已完成和失败的任务记录，返回删除行数。
+// 与 POST /api/tasks/clear-finished 行为一致。
+func (a *App) ClearFinishedTasks() (int64, error) {
+	return a.svc.ClearFinishedTasks()
+}
+
 type UpdateTaskFields struct {
 	ID     uint   `json:"id"`
 	Name   string `json:"name"`

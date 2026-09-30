@@ -10,6 +10,10 @@ export function CheckCaInstalled() {
   return window['go']['main']['App']['CheckCaInstalled']();
 }
 
+export function ClearFinishedTasks() {
+  return window['go']['main']['App']['ClearFinishedTasks']();
+}
+
 export function DeleteTask(arg1) {
   return window['go']['main']['App']['DeleteTask'](arg1);
 }

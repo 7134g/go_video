@@ -34,6 +34,12 @@ func (s *TaskService) Update(task *model.Task) error {
 	return s.repo.Update(task)
 }
 
+// ClearFinishedTasks 删除所有已完成和失败的任务记录，返回删除行数。
+// 未结束的任务（待执行、执行中、已暂停）不在删除范围内。
+func (s *TaskService) ClearFinishedTasks() (int64, error) {
+	return s.repo.DeleteFinished()
+}
+
 func (s *TaskService) GetByID(id uint) (*model.Task, error) {
 	return s.repo.GetByID(id)
 }

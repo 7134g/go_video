@@ -40,6 +40,7 @@ func main() {
 		tasks.GET("", h.List)
 		tasks.POST("", h.Create)
 		tasks.POST("/delete", h.Delete)
+		tasks.POST("/clear-finished", h.ClearFinished)
 		tasks.POST("/update", h.Update)
 		tasks.POST("/start", h.Start)
 		tasks.POST("/pause", h.Pause)

@@ -6,6 +6,7 @@ interface WailsApp {
   AddTask(name: string, url: string, header: string, taskType: string): Promise<any>
   GetTasks(status: number): Promise<any[]>
   DeleteTask(id: number): Promise<void>
+  ClearFinishedTasks(): Promise<number>
   UpdateTask(id: number, name: string, url: string, header: string, taskType: string): Promise<any>
   StartOneTask(id: number): Promise<void>
   PauseTask(id: number): Promise<void>
@@ -49,6 +50,10 @@ export const taskApi = {
   delete: async (id: number) => {
     await app().DeleteTask(id)
     return {}
+  },
+  clearFinished: async () => {
+    const deleted = await app().ClearFinishedTasks()
+    return { data: { deleted } }
   },
   start: async () => {
     const started = await app().StartAllTasks()

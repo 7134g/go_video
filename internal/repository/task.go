@@ -56,6 +56,14 @@ func (r *TaskRepository) UpdateAllByStatus(from, to model.TaskStatus) error {
 	return DB.Model(&model.Task{}).Where("status = ?", from).Update("status", to).Error
 }
 
+// DeleteFinished 批量删除已完成和失败的任务记录，返回删除行数。
+// 仅删除数据库记录，不动磁盘上已下载的文件。
+func (r *TaskRepository) DeleteFinished() (int64, error) {
+	result := DB.Where("status IN ?", []model.TaskStatus{model.TaskStatusCompleted, model.TaskStatusFailed}).
+		Delete(&model.Task{})
+	return result.RowsAffected, result.Error
+}
+
 func (r *TaskRepository) GetAll() ([]model.Task, error) {
 	var tasks []model.Task
 	err := DB.Order("created_at desc").Find(&tasks).Error

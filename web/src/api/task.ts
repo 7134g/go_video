@@ -27,6 +27,7 @@ export const taskApi = {
   create: (data: CreateTaskReq) => request.post<Task>('/tasks', data),
   update: (data: UpdateTaskReq) => request.post<Task>('/tasks/update', data),
   delete: (id: number) => request.post('/tasks/delete', { id }),
+  clearFinished: () => request.post<{ deleted: number }>('/tasks/clear-finished'),
   start: () => request.post<{ started: number }>('/tasks/start'),
   pause: (id: number) => request.post('/tasks/pause', { id }),
   retry: (id: number) => request.post('/tasks/retry', { id }),
