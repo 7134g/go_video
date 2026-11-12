@@ -13,6 +13,9 @@
       <el-form-item label="最大连续错误数">
         <el-input-number v-model="form.max_consecutive_errors" :min="1" :max="100" />
       </el-form-item>
+      <el-form-item label="FFmpeg直连下载M3U8">
+        <el-switch v-model="form.ffmpeg_download_enabled" />
+      </el-form-item>
       <el-form-item label="默认请求头">
         <div style="width: 100%">
           <div v-for="(_, key) in form.default_headers" :key="key" style="display: flex; gap: 8px; margin-bottom: 8px;">
@@ -64,7 +67,8 @@ const form = ref<Config>({
   interceptor_enabled: false,
   agent_address: '127.0.0.1:9999',
   vpn_address: '',
-  vpn_status: false
+  vpn_status: false,
+  ffmpeg_download_enabled: false
 })
 
 watch(() => props.modelValue, async (val) => {

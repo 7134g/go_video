@@ -71,13 +71,14 @@ func GetController() *DownloadController {
 	return downloadController
 }
 
-func (c *DownloadController) ApplyConfig(downloadDir string, maxConcurrent, maxSegment, maxErrors int, defaultHeaders map[string]string) {
+func (c *DownloadController) ApplyConfig(downloadDir string, maxConcurrent, maxSegment, maxErrors int, defaultHeaders map[string]string, ffmpegDownloadEnabled bool) {
 	c.mu.Lock()
 	c.config.DownloadDir = downloadDir
 	c.config.MaxConcurrentTasks = maxConcurrent
 	c.config.MaxSegmentWorkers = maxSegment
 	c.config.MaxConsecutiveErrors = maxErrors
 	c.config.DefaultHeaders = defaultHeaders
+	c.config.FfmpegDownloadEnabled = ffmpegDownloadEnabled
 	// NOTE: 替换 pool/taskSem 不影响已 in-flight 的任务（它们持有旧引用），
 	// 新任务用新容量。完全一致需要更复杂的可调容量实现，目前权衡为简单。
 	c.downloadPool = downloader.NewPool(maxSegment)
@@ -270,6 +271,13 @@ func (c *DownloadController) runTask(task *DTask, callback TaskCallback) {
 			break
 		}
 	case TaskTypeM3u8:
+		if c.config.FfmpegDownloadEnabled {
+			err = c.downloadM3u8WithFfmpeg(task)
+			if err != nil {
+				slog.Error("下载失败", "type", "m3u8-ffmpeg", "task", task.Name, "error", err)
+			}
+			break
+		}
 		err = c.downloadM3u8(task)
 		if err != nil {
 			slog.Error("下载失败", "type", "m3u8", "task", task.Name, "error", err)

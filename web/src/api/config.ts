@@ -10,6 +10,7 @@ export interface Config {
   agent_address: string
     vpn_address: string
   vpn_status: boolean
+  ffmpeg_download_enabled: boolean
 }
 
 export const configApi = {

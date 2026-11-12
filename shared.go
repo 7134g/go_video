@@ -59,6 +59,7 @@ func initShared() *service.ConfigService {
 		cfg.MaxSegmentWorkers,
 		cfg.MaxConsecutiveErrors,
 		cfg.DefaultHeaders,
+		cfg.FfmpegDownloadEnabled,
 	)
 	importTaskFile(cfg.DefaultHeaders)
 	svr.Init()

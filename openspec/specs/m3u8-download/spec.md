@@ -88,3 +88,52 @@
 #### Scenario: 分片进度
 - **WHEN** 完成一个分片下载
 - **THEN** 更新进度为 (已完成分片数/总分片数)
+
+### Requirement: FFmpeg 直连下载模式
+
+系统 SHALL 在配置项 `ffmpeg_download_enabled` 为 `true` 时，将 M3U8 任务交由 ffmpeg 直接下载；为 `false` 时 MUST 保持现有的分片下载与合并流程不变。
+
+#### Scenario: 开关开启时执行直连下载
+
+- **WHEN** 任务类型为 m3u8 且 `ffmpeg_download_enabled` 为 `true`
+- **THEN** 系统以任务 URL 作为 ffmpeg 输入，使用 `-c copy` 直接输出到 `<download_dir>/<任务名>.mp4`，并跳过分片下载、解密与合并阶段
+
+#### Scenario: 开关关闭时保持原有流程
+
+- **WHEN** 任务类型为 m3u8 且 `ffmpeg_download_enabled` 为 `false`
+- **THEN** 系统使用现有的分片下载、AES-128 解密和 ffmpeg 合并流程
+
+#### Scenario: 附加请求头
+
+- **WHEN** 任务 Header 非空
+- **THEN** 系统将任务 Header 以 `Key: Value\r\n` 拼接后作为 ffmpeg `-headers` 参数传入
+
+#### Scenario: 使用默认请求头
+
+- **WHEN** 任务 Header 为空
+- **THEN** 系统使用配置中的 `default_headers` 拼装 ffmpeg `-headers` 参数
+
+#### Scenario: 附加 HTTP 代理
+
+- **WHEN** `vpn_status` 为 `true` 且 `vpn_address` 非空
+- **THEN** 系统向 ffmpeg 传入 `-http_proxy http://<vpn_address>` 参数
+
+#### Scenario: 不附加 HTTP 代理
+
+- **WHEN** `vpn_status` 为 `false` 或 `vpn_address` 为空
+- **THEN** 系统不向 ffmpeg 传入 `-http_proxy` 参数
+
+#### Scenario: ffmpeg 下载失败
+
+- **WHEN** ffmpeg 进程以非零退出码结束或启动失败
+- **THEN** 系统使用 `slog` 记录错误信息与 ffmpeg stderr，并将任务置为失败终态
+
+#### Scenario: 停止直连下载任务
+
+- **WHEN** 用户停止一个正在由 ffmpeg 直连下载的任务
+- **THEN** 系统取消任务 context 以终止 ffmpeg 进程，并按 `context.Canceled` 处理该任务
+
+#### Scenario: 直连模式进度
+
+- **WHEN** 直连下载开始与结束
+- **THEN** 系统在开始时将进度置为 0/1，成功后置为 1/1，不报告分片粒度的中间进度

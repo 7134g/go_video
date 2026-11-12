@@ -3,17 +3,18 @@ package model
 import "github.com/gin-gonic/gin"
 
 type Config struct {
-	MaxConcurrentTasks   int               `json:"max_concurrent_tasks"`   // 并发任务数
-	MaxSegmentWorkers    int               `json:"max_segment_workers"`    // 并发分片数
-	DownloadDir          string            `json:"download_dir"`           // 下载地址
-	MaxConsecutiveErrors int               `json:"max_consecutive_errors"` // 连续错误数
-	DefaultHeaders       map[string]string `json:"default_headers"`        // 默认请求头
-	LogLevel             string            `json:"log_level"`              // 日志级别: debug/info/warn/error，空=info
-	InterceptorEnabled   bool              `json:"interceptor_enabled"`    // 是否开启拦截器
-	AgentAddress         string            `json:"agent_address"`          // 拦截器代理地址
-	VpnAddress           string            `json:"vpn_address"`            // vpn地址
-	VpnStatus            bool              `json:"vpn_status"`             // 是否使用配置的vpn地址下载
-	GinMode              string            `json:"gin_mode"`
+	MaxConcurrentTasks    int               `json:"max_concurrent_tasks"`    // 并发任务数
+	MaxSegmentWorkers     int               `json:"max_segment_workers"`     // 并发分片数
+	DownloadDir           string            `json:"download_dir"`            // 下载地址
+	MaxConsecutiveErrors  int               `json:"max_consecutive_errors"`  // 连续错误数
+	DefaultHeaders        map[string]string `json:"default_headers"`         // 默认请求头
+	LogLevel              string            `json:"log_level"`               // 日志级别: debug/info/warn/error，空=info
+	InterceptorEnabled    bool              `json:"interceptor_enabled"`     // 是否开启拦截器
+	AgentAddress          string            `json:"agent_address"`           // 拦截器代理地址
+	VpnAddress            string            `json:"vpn_address"`             // vpn地址
+	VpnStatus             bool              `json:"vpn_status"`              // 是否使用配置的vpn地址下载
+	FfmpegDownloadEnabled bool              `json:"ffmpeg_download_enabled"` // 是否用 ffmpeg 直连下载 m3u8
+	GinMode               string            `json:"gin_mode"`
 }
 
 func DefaultConfig() *Config {

@@ -117,6 +117,10 @@ func (s *ConfigService) UpdateConfig(updates map[string]interface{}) (*model.Con
 			if v, ok := val.(bool); ok {
 				cfg.VpnStatus = v
 			}
+		case "ffmpeg_download_enabled":
+			if v, ok := val.(bool); ok {
+				cfg.FfmpegDownloadEnabled = v
+			}
 		}
 	}
 
@@ -131,6 +135,7 @@ func (s *ConfigService) UpdateConfig(updates map[string]interface{}) (*model.Con
 		cfg.MaxSegmentWorkers,
 		cfg.MaxConsecutiveErrors,
 		cfg.DefaultHeaders,
+		cfg.FfmpegDownloadEnabled,
 	)
 
 	// Handle interceptor
