@@ -67,6 +67,27 @@ func (c *DownloadController) downloadM3u8(task *DTask) error {
 	segments := parsed.Segments
 	task.Progress.SetTotal(int64(len(segments)))
 
+	segURLs := make([]string, len(segments))
+	segFiles := make([]string, len(segments))
+	for i, seg := range segments {
+		segURLs[i] = m3u8.ResolveURL(seg.URI, baseURL)
+		segFiles[i] = filepath.Join(dir, fmt.Sprintf("%06d%s", i, m3u8.SegmentExtension(segURLs[i])))
+	}
+
+	// 清理旧版本遗留的、不属于当前播放列表的分片文件，避免合并时混入。
+	cleanupSegments(dir, segFiles, parsed.InitSegment != nil)
+
+	// 下载 fMP4 初始化分片（EXT-X-MAP）。
+	if parsed.InitSegment != nil {
+		initFile := filepath.Join(dir, m3u8.InitSegmentName)
+		if _, err := os.Stat(initFile); err != nil {
+			initURL := m3u8.ResolveURL(parsed.InitSegment.URI, baseURL)
+			if err := c.downloadSegment(task.ctx, initURL, initFile, task.Header, parsed.InitSegment, parsed.GetSegmentKey(parsed.InitSegment), parsed.MediaSequence); err != nil {
+				return fmt.Errorf("下载初始化分片失败: %w", err)
+			}
+		}
+	}
+
 	// 快照 pool，避免 ApplyConfig 中途替换。
 	c.mu.RLock()
 	pool := c.downloadPool
@@ -89,13 +110,13 @@ func (c *DownloadController) downloadM3u8(task *DTask) error {
 			break
 		}
 
-		segFile := filepath.Join(dir, fmt.Sprintf("%06d.ts", i))
+		segFile := segFiles[i]
 		if _, err := os.Stat(segFile); err == nil {
 			task.Progress.IncrementDone()
 			continue
 		}
 
-		segURL := m3u8.ResolveURL(seg.URI, baseURL)
+		segURL := segURLs[i]
 		key := parsed.GetSegmentKey(seg)
 
 		idx := i
@@ -161,6 +182,33 @@ func (c *DownloadController) downloadM3u8(task *DTask) error {
 	}
 
 	return nil
+}
+
+// cleanupSegments 删除旧版本遗留的、与当前播放列表不匹配的分片文件。
+// keep 为本次任务期望的分片路径；hasInit 为 false 时删除遗留的 init.mp4。
+func cleanupSegments(dir string, keep []string, hasInit bool) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+	keepSet := make(map[string]bool, len(keep))
+	for _, f := range keep {
+		keepSet[filepath.Base(f)] = true
+	}
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		switch {
+		case name == m3u8.InitSegmentName:
+			if !hasInit {
+				_ = os.Remove(filepath.Join(dir, name))
+			}
+		case m3u8.IsSegmentFile(name) && !keepSet[name]:
+			_ = os.Remove(filepath.Join(dir, name))
+		}
+	}
 }
 
 func (c *DownloadController) parseM3u8(ctx context.Context, m3u8URL string, header http.Header) (*m3u8.M3u8, *url.URL, error) {

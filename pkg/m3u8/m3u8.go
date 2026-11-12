@@ -3,6 +3,8 @@ package m3u8
 
 import (
 	"errors"
+	"net/url"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -30,9 +32,47 @@ type M3u8 struct {
 	Segments       []*Segment
 	MasterPlaylist []*MasterPlaylist
 	Keys           map[int]*Key
+	InitSegment    *Segment     // #EXT-X-MAP，fMP4 初始化分片；多个 MAP 时只保留第一个
 	EndList        bool         // #EXT-X-ENDLIST
 	PlaylistType   PlaylistType // VOD or EVENT
 	TargetDuration float64      // #EXT-X-TARGETDURATION:duration
+}
+
+// InitSegmentName 是 fMP4 初始化分片（EXT-X-MAP）的落盘文件名。
+const InitSegmentName = "init.mp4"
+
+// segmentExtensions 是支持识别的分片扩展名。
+var segmentExtensions = map[string]bool{
+	".ts":  true,
+	".m4a": true,
+	".m4s": true,
+	".aac": true,
+	".mp4": true,
+}
+
+// segmentFilePattern 匹配 "%06d.<ext>" 形式的分片文件名。
+var segmentFilePattern = regexp.MustCompile(`^\d{6}\.`)
+
+// SegmentExtension 根据分片 URL 的 path 后缀推断落盘扩展名。
+// query / fragment 会被忽略；无法识别或解析失败时返回 ".ts"。
+func SegmentExtension(uri string) string {
+	u, err := url.Parse(uri)
+	if err != nil {
+		return ".ts"
+	}
+	ext := strings.ToLower(path.Ext(u.Path))
+	if segmentExtensions[ext] {
+		return ext
+	}
+	return ".ts"
+}
+
+// IsSegmentFile 判断 name 是否为 "%06d.<ext>" 命名的分片文件。
+func IsSegmentFile(name string) bool {
+	if !segmentFilePattern.MatchString(name) {
+		return false
+	}
+	return segmentExtensions[strings.ToLower(path.Ext(name))]
 }
 
 type Segment struct {

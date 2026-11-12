@@ -157,6 +157,20 @@ func ParseM3u8Data(reader io.Reader) (*M3u8, error) {
 			key.URI = params["URI"]
 			key.IV = params["IV"]
 			m3u8.Keys[keyIndex] = key
+		// 解析 fMP4 初始化分片
+		// 不支持 BYTERANGE 属性，也不支持多个/中途切换的 MAP（只保留第一个）。
+		case strings.HasPrefix(line, "#EXT-X-MAP:"):
+			params := parseLineParameters(line)
+			uri := params["URI"]
+			if uri == "" {
+				return nil, fmt.Errorf("invalid EXT-X-MAP, missing URI, line: %d", i+1)
+			}
+			if m3u8.InitSegment == nil {
+				m3u8.InitSegment = &Segment{
+					URI:      uri,
+					KeyIndex: keyIndex,
+				}
+			}
 		case line == "#EndList":
 			m3u8.EndList = true
 		default:

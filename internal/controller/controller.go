@@ -275,8 +275,9 @@ func (c *DownloadController) runTask(task *DTask, callback TaskCallback) {
 			slog.Error("下载失败", "type", "m3u8", "task", task.Name, "error", err)
 			break
 		}
-		if err := c.mergeM3u8(task); err != nil {
-			BroadcastMessage(task.ID, "合并失败..."+err.Error())
+		if mergeErr := c.mergeM3u8(task); mergeErr != nil {
+			err = mergeErr
+			BroadcastMessage(task.ID, "合并失败..."+mergeErr.Error())
 		}
 
 	}
