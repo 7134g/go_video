@@ -2,6 +2,7 @@
   <div class="page-container">
     <div class="main-content">
       <div class="toolbar">
+        <el-button @click="showConfig = true">配置</el-button>
         <el-button type="primary" @click="reflashTasks">刷新</el-button>
         <el-button type="primary" @click="showForm = true">新建任务</el-button>
         <el-button type="success" @click="handleStart">开始下载</el-button>
@@ -18,7 +19,6 @@
           <el-option label="失败" :value="3" />
           <el-option label="已暂停" :value="4" />
         </el-select>
-        <el-button @click="showConfig = true">配置</el-button>
       </div>
 
 
