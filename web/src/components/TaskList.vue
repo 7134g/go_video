@@ -6,7 +6,7 @@
         <el-button type="primary" @click="showForm = true">新建任务</el-button>
         <el-button type="success" @click="handleStart">开始下载</el-button>
         <el-button type="warning" @click="handleStopAll">暂停全部</el-button>
-        <el-button type="danger" plain :loading="clearing" @click="handleClearFinished">清空已结束</el-button>
+        <el-button type="danger" plain :loading="clearing" @click="handleClearFinished">清空已结束任务</el-button>
       </div>
 
       <div>
