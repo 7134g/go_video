@@ -3,8 +3,9 @@ package api
 import (
 	"net/http"
 
+	"luka/pkg/proxy"
+
 	"github.com/gin-gonic/gin"
-	"go_video/pkg/proxy"
 )
 
 type CaHandler struct{}

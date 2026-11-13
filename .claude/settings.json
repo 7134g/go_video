@@ -20,7 +20,7 @@
     ],
     "additionalDirectories": [
       "./",
-      "go_video/"
+      "luka/"
     ]
   }
 }

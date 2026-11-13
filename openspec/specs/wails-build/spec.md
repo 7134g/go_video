@@ -5,7 +5,7 @@
 
 #### Scenario: wails.json 配置
 - **WHEN** Wails 项目配置存在
-- **THEN** 配置文件 SHALL 指定应用名称为 "go_video"
+- **THEN** 配置文件 SHALL 指定应用名称为 "luka"
 - **AND** 前端构建输出路径 SHALL 指向 `web/dist`
 - **AND** Go 入口文件 SHALL 为 `desktop/main.go`
 
@@ -48,10 +48,10 @@
 
 #### Scenario: Windows 打包
 - **WHEN** 在 Windows 平台构建 desktop 版本
-- **THEN** 系统产出 `go_video.exe`
+- **THEN** 系统产出 `luka.exe`
 - **AND** 应用使用指定的 `.ico` 图标文件
 
 #### Scenario: macOS 打包
 - **WHEN** 在 macOS 平台构建 desktop 版本
-- **THEN** 系统产出 `go_video.app` 应用包
+- **THEN** 系统产出 `luka.app` 应用包
 - **AND** 应用使用指定的 `.icns` 图标文件

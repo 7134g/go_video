@@ -1,9 +1,9 @@
 package repository
 
 import (
-	"go_video/internal/model"
+	"luka/internal/model"
 
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 

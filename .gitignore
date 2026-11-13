@@ -8,13 +8,12 @@ log
 build
 ffmpeg.exe
 video.db
-go_video
-go_video.exe
+luka
+luka.exe
 install_cert
 install_cert.exe
 uninstall_cert
 uninstall_cert.exe
-config.json
 ca.crt
 ca.key
 key.pem

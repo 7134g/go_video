@@ -3,9 +3,9 @@ package controller
 import (
 	"context"
 	"fmt"
-	"go_video/pkg/m3u8"
 	"io"
 	"log/slog"
+	"luka/pkg/m3u8"
 	"net/http"
 	"net/url"
 	"os"

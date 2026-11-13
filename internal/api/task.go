@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"go_video/internal/model"
-	"go_video/internal/service"
-	"go_video/pkg/proxy"
+	"luka/internal/model"
+	"luka/internal/service"
+	"luka/pkg/proxy"
 
 	"github.com/gin-gonic/gin"
 )

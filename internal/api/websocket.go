@@ -5,9 +5,10 @@ import (
 	"net/http"
 	"net/url"
 
+	"luka/internal/controller"
+
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"go_video/internal/controller"
 )
 
 // 仅允许 localhost 同源 WebSocket 升级，避免任意网页接管本地下载器。

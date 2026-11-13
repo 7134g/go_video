@@ -2,11 +2,11 @@ package service
 
 import (
 	"errors"
-	"go_video/internal/controller"
-	"go_video/internal/model"
-	"go_video/internal/repository"
-	"go_video/pkg/proxy"
 	"log/slog"
+	"luka/internal/controller"
+	"luka/internal/model"
+	"luka/internal/repository"
+	"luka/pkg/proxy"
 	"os"
 	"sync"
 )

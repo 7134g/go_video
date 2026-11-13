@@ -5,7 +5,7 @@ import (
 	"os"
 	"sync"
 
-	"go_video/internal/model"
+	"luka/internal/model"
 )
 
 const configFile = "config.json"

@@ -40,6 +40,7 @@ export namespace model {
 	    agent_address: string;
 	    vpn_address: string;
 	    vpn_status: boolean;
+	    ffmpeg_download_enabled: boolean;
 	    gin_mode: string;
 	
 	    static createFrom(source: any = {}) {
@@ -58,6 +59,7 @@ export namespace model {
 	        this.agent_address = source["agent_address"];
 	        this.vpn_address = source["vpn_address"];
 	        this.vpn_status = source["vpn_status"];
+	        this.ffmpeg_download_enabled = source["ffmpeg_download_enabled"];
 	        this.gin_mode = source["gin_mode"];
 	    }
 	}

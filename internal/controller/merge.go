@@ -2,7 +2,7 @@ package controller
 
 import (
 	"fmt"
-	"go_video/pkg/m3u8"
+	"luka/pkg/m3u8"
 	"os"
 	"path/filepath"
 	"runtime"

@@ -1,8 +1,8 @@
 package main
 
 import (
-	"go_video/pkg/proxy"
 	"log"
+	"luka/pkg/proxy"
 	"os"
 )
 

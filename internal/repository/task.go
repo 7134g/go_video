@@ -3,7 +3,7 @@ package repository
 import (
 	"errors"
 
-	"go_video/internal/model"
+	"luka/internal/model"
 
 	"gorm.io/gorm"
 )

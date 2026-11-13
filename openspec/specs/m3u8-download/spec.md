@@ -3,7 +3,7 @@
 ## Requirements
 
 ### Requirement: M3U8 文件解析
-系统 SHALL 使用 `go_video/pkg/m3u8.ParseM3u8Data()` 解析 M3U8 文件内容。
+系统 SHALL 使用 `luka/pkg/m3u8.ParseM3u8Data()` 解析 M3U8 文件内容。
 
 #### Scenario: 解析标准 M3U8 文件
 - **WHEN** 提供有效的 M3U8 URL

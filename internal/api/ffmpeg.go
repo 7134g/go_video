@@ -1,7 +1,7 @@
 package api
 
 import (
-	"go_video/pkg/downloader"
+	"luka/pkg/downloader"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

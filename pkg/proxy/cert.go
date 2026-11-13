@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	DefaultDomain        = "go_video proxy.local"
-	DefaultOrganization  = "go_video Proxy CA"
+	DefaultDomain        = "luka proxy.local"
+	DefaultOrganization  = "luka Proxy CA"
 	DefaultValidDuration = 365 * 24 * time.Hour
 	CACertFile           = "ca.crt"
 	CAKeyFile            = "ca.key"

@@ -3,8 +3,9 @@ package api
 import (
 	"net/http"
 
+	"luka/internal/service"
+
 	"github.com/gin-gonic/gin"
-	"go_video/internal/service"
 )
 
 type ConfigHandler struct {

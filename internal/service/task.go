@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 
-	"go_video/internal/controller"
-	"go_video/internal/model"
-	"go_video/internal/repository"
+	"luka/internal/controller"
+	"luka/internal/model"
+	"luka/internal/repository"
 )
 
 type TaskService struct {

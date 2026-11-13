@@ -1,0 +1,16 @@
+{
+  "max_concurrent_tasks": 3,
+  "max_segment_workers": 10,
+  "download_dir": "./downloads",
+  "max_consecutive_errors": 10,
+  "default_headers": {
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+  },
+  "log_level": "",
+  "interceptor_enabled": true,
+  "agent_address": "127.0.0.1:9999",
+  "vpn_address": "127.0.0.1:7890",
+  "vpn_status": true,
+  "ffmpeg_download_enabled": true,
+  "gin_mode": "debug"
+}

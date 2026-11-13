@@ -3,19 +3,19 @@ package main
 import (
 	"bufio"
 	"encoding/json"
-	"go_video/internal/logger"
-	"go_video/pkg/proxy"
 	"log"
 	"log/slog"
+	"luka/internal/logger"
+	"luka/pkg/proxy"
 	"net/http"
 	"os"
 	"runtime"
 	"strings"
 
-	"go_video/internal/controller"
-	"go_video/internal/model"
-	"go_video/internal/repository"
-	"go_video/internal/service"
+	"luka/internal/controller"
+	"luka/internal/model"
+	"luka/internal/repository"
+	"luka/internal/service"
 )
 
 func InitCa() {

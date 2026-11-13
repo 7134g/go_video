@@ -4,12 +4,12 @@ package main
 
 import (
 	"context"
-	"go_video/pkg/downloader"
+	"luka/pkg/downloader"
 
-	"go_video/internal/controller"
-	"go_video/internal/model"
-	"go_video/internal/service"
-	"go_video/pkg/proxy"
+	"luka/internal/controller"
+	"luka/internal/model"
+	"luka/internal/service"
+	"luka/pkg/proxy"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )

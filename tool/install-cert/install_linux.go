@@ -5,9 +5,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"go_video/pkg/proxy"
 	"io"
 	"log"
+	"luka/pkg/proxy"
 	"os"
 	"os/exec"
 	"path/filepath"

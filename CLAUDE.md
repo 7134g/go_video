@@ -9,7 +9,7 @@
 ```bash
 # 开发：前后端分离
 cd web && npm run dev             # Vite 开发服务器，将 /api 和 WebSocket 反代到 :8080（见 web/vite.config.ts）
-go build . && ./go_video          # 主程序（在 :8080 提供嵌入的 Vue SPA + API）
+go build . && ./luka          # 主程序（在 :8080 提供嵌入的 Vue SPA + API）
 
 # 一次性发布构建（Windows 目标，产物在 build/）：web 构建 + 主程序 + 证书安装器 + 拷贝 ffmpeg.exe
 ./release.sh

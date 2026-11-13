@@ -20,7 +20,7 @@
 
 ## Impact
 
-仅影响 `chrome_ext/` 目录下的文件：
+仅影响 `../../../../tool/chrome_ext` 目录下的文件：
 - `manifest.json` — 新增 `action.default_popup`
 - `background.js` — 新增消息监听和 badge 更新逻辑
 - `options.html` — 无功能变化
